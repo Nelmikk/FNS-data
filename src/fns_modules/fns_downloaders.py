@@ -1,0 +1,165 @@
+import requests
+import os
+from pathlib import Path
+
+from bs4 import BeautifulSoup
+import re
+import warnings
+
+from src.fns_modules.fns_errors import DownloadError
+
+
+class Downloader:
+    download_dir: Path = Path(fr'{os.getcwd()}\downloaded_dir')
+    _page_url = None
+
+    _file_name = 'downloaded_file.zip'
+
+    # @staticmethod
+    # def error_handler(func: Callable, ) -> Callable:
+    #     """
+    #     Обработка ошибок.
+    #     :param func:
+    #     :return:
+    #     """
+    #     @wraps(func)
+    #     def wrapper(self,
+    #                 *args,
+    #                 **kwargs, ) -> bool | str:
+    #         try:
+    #             if not func(self, *args, **kwargs):
+    #                 return False
+    #         except Exception as e:
+    #             print(f'{e} | {e.__class__} --- {self.__class__.__name__}')
+    #             if e.__class__ == FileNotFoundError:                # Ошибка во время скачивания файла
+    #                 self._del_error_file()                          # Удаление частично скачанного файла
+    #                 return False
+    #             elif e.__class__ == NotADirectoryError:             # Ошибка при создании директории
+    #                 return False
+    #             else:
+    #                 return False
+    #         return f'{self._download_dir}/{self._file_name}'        # Возврашает местоположение скачанного файла
+    #         ...
+    #
+    #     return wrapper
+
+
+    def _del_error_file(self, ):
+        """
+        Удаляет частчно скачанный файл.
+        :return:
+        """
+        try:
+            os.remove(fr'{self.download_dir}\{self._file_name}')
+            print('Partially downloaded file is deleted.')
+        except:
+            print('Partially downloaded file is not deleted.')
+
+
+    def _check_download_dir(self, ):
+        """
+        Проверяет, существует ли директория для скачивания.
+        :return:
+        """
+        try:
+            if not self.download_dir:
+                self.download_dir.mkdir()
+        except: raise NotADirectoryError(f'Can not create directory "{self.download_dir}".')
+
+
+
+    def _check_file_name(self, ):
+        """
+        Проверяет, чтобы новый скачанный файл не перезаписывал предыдущий - меняет имя нового файла.
+        :return:
+        """
+        while True:
+            i = 1
+            if not (self._file_name in os.listdir(self.download_dir)):
+                break
+            warnings.warn(f'{self._file_name} is already in download directory. '
+                          f'The file will be named {i}_{self._file_name}.')
+            self._file_name = f'{i}_{self._file_name}'
+            i += 1
+
+
+    def _write_response(self,
+                        response: requests.models.Response, ):
+        """
+        :param response:
+        :return:
+        """
+        self._check_file_name()
+
+        downloaded = 0
+        try:
+            with open(fr'{self.download_dir}\{self._file_name}', 'wb') as f:
+                for content in response.iter_content(chunk_size=1_000_000):
+                    f.write(content)
+                    downloaded += 1_000_000
+                    print(f'\r{self._file_name} downloading... {downloaded} bytes ({downloaded/1_000_000} Mb). '
+                          f'--- {self.__class__.__name__}',
+                          end='',
+                          flush=True)
+
+                print(f'\n{self._file_name} downloaded (~{downloaded/1_000_000}Mb)'
+                      f'--- {self.__class__.__name__}\n')
+        except:
+            self._del_error_file()
+            raise DownloadError()
+
+
+    @property
+    def _file_url(self, ) -> str:
+        """
+        Собирает необходимую инфу для скачивания.
+        Находит ЮРЛ файла и задает для него имя.
+        :return:
+        """
+        page_content = requests.get(self._page_url).content
+        page_content = BeautifulSoup(page_content, 'lxml')
+        file_url = [i for i in page_content.find_all(string=re.compile('https://file.nalog.ru/opendata'))
+                          if '.zip' in i][0]
+        self._file_name = file_url.split(sep='/')[-1]
+        return file_url
+
+
+    def _download(self, ):
+        file_url = self._file_url
+
+        self._check_download_dir()
+
+        response = requests.get(url=file_url, stream=True)
+        if response.status_code == 200:
+            self._write_response(response=response)
+
+
+    def download(self, ) -> Path | None:
+        """
+        Вовзращает название записанного файла при успехе, иначе - False.
+        :return:
+        """
+        if self._page_url is None:
+            warnings.warn('!!!!Page was updated!!!!')
+            return None
+        self._download()
+        return Path(f'{self.download_dir}/{self._file_name}')
+        ...
+
+
+
+
+class Downloader_RSMP(Downloader):
+    def __init__(self, ):
+        self._page_url = 'https://www.nalog.gov.ru/opendata/7707329152-rsmp/'
+        super().__init__()
+
+class Downloader_SNR(Downloader):
+    def __init__(self, ):
+        self._page_url = 'https://www.nalog.gov.ru/opendata/7707329152-snr/'
+        super().__init__()
+
+class Downloader_SNRIP(Downloader):
+    def __init__(self, ):
+        self._page_url = 'https://www.nalog.gov.ru/opendata/7707329152-snrip/'
+        super().__init__()
