@@ -133,6 +133,27 @@ class okveds_shadow(okveds_mixin, Base):
     __tablename__ = 'okveds_shadow'
 
 
+class relevant_okveds_mixin:
+    """
+    Плейсхолдер, если потребуется и эту таблицу перемещать через алембик.
+    """
+    # id: Mapped[int] = mapped_column(BigInteger,
+    #                                 primary_key=True,
+    #                                 autoincrement=True, )
+    letter: Mapped[str]
+    code: Mapped[str] = mapped_column(unique=True,
+                                      primary_key=True,
+                                      autoincrement=False)
+    name: Mapped[str]
+
+
+class relevant_okveds(relevant_okveds_mixin, Base):
+    __tablename__ = 'relevant_okveds'
+
+
+class relevant_okveds_shadow(relevant_okveds_mixin, Base):
+    __tablename__ = 'relevant_okveds_shadow'
+
 
 
 models_dict = {x.__name__: x for x in Base.__subclasses__()}

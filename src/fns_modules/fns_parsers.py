@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import os
 from typing import Any
 
-from src.models.fns_models import *
+from src.models.other_models import *
 from src.models.database_models import *
 from src.fns_modules.fns_misc import *
 from src.fns_modules.fns_errors import NoFileToDelete
