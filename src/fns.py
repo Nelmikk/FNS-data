@@ -16,7 +16,7 @@ from database_modules.orm import drop_all_tables_using_models, create_all_tables
 from database_modules.database_conf import settings_super_user
 
 from src.fns_modules.fns_downloaders import Downloader
-from src.fns_modules.fns_parsers import Parser_Base, Parser_SNO_UL, Parser_SNO_IP, Parser_RSMP_MAIN_INFO, Parser_RSMP_ADDITIONAL_OKVEDS
+from src.fns_modules.fns_parsers import Parser_Base, Parser_SNO_UL, Parser_SNO_IP, Parser_RSMP_MAIN_INFO, Parser_RSMP_ADDITIONAL_OKVEDS, Parser_RSMP_LICENSES
 from src.fns_modules.fns_downloaders import Downloader_RSMP, Downloader_SNR
 
 
@@ -153,7 +153,7 @@ from src.fns_modules.fns_downloaders import Downloader_RSMP, Downloader_SNR
 
 async def async_generator_wrapper(sync_generator: Generator, ):
     """
-    Преобразует синхронный генератор в асинхронный
+    Преобразует синхронный генератор в асинхронный.
     :param sync_generator:
     :return:
     """
@@ -309,7 +309,7 @@ class Base_FNS_data_updater(ABC):
         :param delete_file_after_update:    Optional. Принимает bool.
                                                 Если True, то zip-архив удалится после скачивания.
         """
-        print(f'{self.__class__.__name__} is updating data')
+        print(f'\n{self.__class__.__name__} is updating data')
         self.delete_file_after_update = delete_file_after_update
         self._semaphore_count = semaphore_count if semaphore_count > 0 else self.__semaphore_count
         if not (0 < cpu_count <= mp.cpu_count()):
@@ -452,6 +452,18 @@ class FNS_data_updater_RSMP_ADDITIONAL_OKVEDS(Base_FNS_data_updater):
                          delete_file_after_update=delete_file_after_update)
 
 
+class FNS_data_updater_LICENSES(Base_FNS_data_updater):
+    """
+
+    """
+    def __init__(self, cpu_count: int = 1,
+                 semaphore_count: int = 2,
+                 delete_file_after_update: bool = True,):
+        self._downloader = Downloader_RSMP()
+        self._parser = Parser_RSMP_LICENSES
+        super().__init__(cpu_count=cpu_count,
+                         semaphore_count=semaphore_count,
+                         delete_file_after_update=delete_file_after_update)
 
 class FNS_data_updater_SNO(Base_FNS_data_updater):
     """
@@ -529,24 +541,34 @@ def fns_new():
     drop_all_tables_using_models()
     create_all_tables_from_models()
 
-    # st = time.perf_counter()
-    # FNS_data_updater_RSMP_MAIN_INFO(cpu_count=8,
-    #                                 semaphore_count=10,
-    #                                 delete_file_after_update=False).update_data(
-    #     file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-10082026-structure-12052026.zip')
-    # FNS_data_updater_RSMP_ADDITIONAL_OKVEDS(cpu_count=8,
-    #                                         semaphore_count=10,
-    #                                         delete_file_after_update=False).update_data(
-    #     file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-10082026-structure-12052026.zip',)
-    # FNS_data_updater_SNO(cpu_count=8,
-    #                      semaphore_count=10,
-    #                      delete_file_after_update=False).update_data(
-    #     file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-20260625-structure-20230425.zip')
-    # FNS_data_updater_SNO_IP(cpu_count=8,
-    #                         semaphore_count=10,
-    #                         delete_file_after_update=False).update_data(
-    #     file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-20260625-structure-20241025.zip')
-    # print('\n---\n', time.perf_counter() - st, ' seconds passed.')
+    st = time.perf_counter()
+
+    FNS_data_updater_RSMP_MAIN_INFO(cpu_count=8,
+                                    semaphore_count=10,
+                                    delete_file_after_update=False).update_data(
+        file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-10082026-structure-12052026.zip')
+
+    FNS_data_updater_RSMP_ADDITIONAL_OKVEDS(cpu_count=8,
+                                            semaphore_count=10,
+                                            delete_file_after_update=False).update_data(
+        file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-10082026-structure-12052026.zip',)
+
+    FNS_data_updater_LICENSES(cpu_count=8,
+                                            semaphore_count=10,
+                                            delete_file_after_update=False).update_data(
+        file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-10082026-structure-12052026.zip',)
+
+    FNS_data_updater_SNO(cpu_count=8,
+                         semaphore_count=10,
+                         delete_file_after_update=False).update_data(
+        file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-20260625-structure-20230425.zip')
+
+    FNS_data_updater_SNO_IP(cpu_count=8,
+                            semaphore_count=10,
+                            delete_file_after_update=False).update_data(
+        file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-20260625-structure-20241025.zip')
+
+    print('\n---\n', time.perf_counter() - st, ' seconds passed.')
 
 
 if __name__ == '__main__':

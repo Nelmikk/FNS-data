@@ -1,16 +1,31 @@
 from abc import ABC, abstractmethod
-import os
 from typing import Any
 
 from src.models.other_models import *
 from src.models.database_models import *
 from src.fns_modules.fns_misc import *
-from src.fns_modules.fns_errors import NoFileToDelete
+
+
+
+class Init_ogrn_inn_mixin:
+    def initialize(self, element: etree._Element, ):
+        if element.tag == 'Документ':
+            for child_element in element:
+                self.initialize(element=child_element)
+                if self.ogrn and self.inn:
+                    return True
+        elif element.tag == 'ИПВклМСП':
+            self.inn, self.ogrn = int(element.get('ИННФЛ')), int(element.get('ОГРНИП'))
+            return True
+        elif element.tag == 'ОргВклМСП':
+            self.inn, self.ogrn = int(element.get('ИННЮЛ')), int(element.get('ОГРН'))
+            return True
+        return False
 
 
 
 class Tag_parser_Base(ABC):
-    _database_model_name: str
+    _database_model: type[Base]
     def handle(self,
                elements: etree._Element, ) -> dict[str, str | list[Any]] | None:
         output = []
@@ -36,15 +51,15 @@ class Tag_parser_Base(ABC):
         ...
 
     @property
-    @abstractmethod
+    # @abstractmethod
     def _org_info(self, ) -> dict | list | None:
-        # return dict_from_database_model_name[self._database_model_name]
+        return create_dict_from_database_model(self._database_model)
         ...
 
     @property
-    @abstractmethod
+    # @abstractmethod
     def _tablename(self, ) -> str | None:
-        # return tablename_from_database_model_name[self._database_model_name]
+        return get_tablename_from_database_model(self._database_model)
         ...
 
     @abstractmethod
@@ -57,19 +72,20 @@ class Tag_parser_Base(ABC):
 
 class Tag_parser_OGRN_MAIN_INFO(Tag_parser_Base):
     def __init__(self):
-        self._database_model_name = 'fns_main_info_shadow'
+        self._database_model = fns_main_info_shadow
 
-    @property
-    def _org_info(self, ) -> dict | None:
-        # return dict_from_database_model_name['fns_main_info_shadow']
-        return create_dict_from_database_model(fns_main_info_shadow)
-        ...
+    # @property
+    # def _org_info(self, ) -> dict | None:
+    #     # return dict_from_database_model_name['fns_main_info_shadow']
+    #     return create_dict_from_database_model(fns_main_info_shadow)
+    #     ...
 
-    @property
-    def _tablename(self, ) -> str | None:
-        # return tablename_from_database_model_name['fns_main_info_shadow']
-        return get_tablename_from_database_model(fns_main_info_shadow)
-        ...
+    # @property
+    # def _tablename(self, ) -> str | None:
+    #     # return tablename_from_database_model_name['fns_main_info_shadow']
+    #     return get_tablename_from_database_model(fns_main_info_shadow)
+    #     ...
+    #
     def _parse_recursive(self,
                          element: etree._Element, ) -> None:
         if element.tag == 'Документ':
@@ -124,9 +140,9 @@ class Tag_parser_OGRN_MAIN_INFO(Tag_parser_Base):
         #     pass
 
 
-class Tag_parser_ADDITIONAL_OKVEDS(Tag_parser_Base):
+class Tag_parser_ADDITIONAL_OKVEDS(Tag_parser_Base, Init_ogrn_inn_mixin):
     def __init__(self):
-        self._database_model_name = 'okveds_shadow'
+        self._database_model = okveds_shadow
 
     def handle(self,
                elements: etree._Element, ) -> dict[str, str | list[Any]] | None:
@@ -136,7 +152,7 @@ class Tag_parser_ADDITIONAL_OKVEDS(Tag_parser_Base):
         if not tablename: return None
         self.inn, self.ogrn = (None, None)
         for element in elements:
-            if self._initialize_inn_ogrn(element=element):
+            if self.initialize(element=element):
                 self.org_info = self._org_info
                 self._parse_recursive(element=element)
                 output += self.org_info
@@ -148,31 +164,31 @@ class Tag_parser_ADDITIONAL_OKVEDS(Tag_parser_Base):
     def _org_info(self, ) -> dict | list:
         return []
 
-    @property
-    def _tablename(self, ) -> str | None:
-        # return get_tablename_from_database_model(okveds_shadow)
-        return get_tablename_from_database_model(okveds_shadow)
+#     @property
+#     def _tablename(self, ) -> str | None:
+#         # return get_tablename_from_database_model(okveds_shadow)
+#         return get_tablename_from_database_model(okveds_shadow)
 
-    def _initialize_inn_ogrn(self,
-                             element, ) -> bool:
-        """
-        Инициилизирует self.inn, self.ogrn.
-        :param element:
-        :return:
-        """
-        if element.tag == 'Документ':
-            for child_element in element:
-                self._initialize_inn_ogrn(element=child_element)
-                if self.ogrn and self.inn:
-                    return True
-        elif element.tag == 'ИПВклМСП':
-            self.inn, self.ogrn = int(element.get('ИННФЛ')), int(element.get('ОГРНИП'))
-            return True
-        elif element.tag == 'ОргВклМСП':
-            self.inn, self.ogrn = int(element.get('ИННЮЛ')), int(element.get('ОГРН'))
-            return True
-        return False
-        ...
+    # def _initialize_inn_ogrn(self,
+    #                          element, ) -> bool:
+    #     """
+    #     Инициилизирует self.inn, self.ogrn.
+    #     :param element:
+    #     :return:
+    #     """
+    #     if element.tag == 'Документ':
+    #         for child_element in element:
+    #             self._initialize_inn_ogrn(element=child_element)
+    #             if self.ogrn and self.inn:
+    #                 return True
+    #     elif element.tag == 'ИПВклМСП':
+    #         self.inn, self.ogrn = int(element.get('ИННФЛ')), int(element.get('ОГРНИП'))
+    #         return True
+    #     elif element.tag == 'ОргВклМСП':
+    #         self.inn, self.ogrn = int(element.get('ИННЮЛ')), int(element.get('ОГРН'))
+    #         return True
+    #     return False
+    #     ...
 
 
     def _parse_recursive(self,
@@ -185,7 +201,7 @@ class Tag_parser_ADDITIONAL_OKVEDS(Tag_parser_Base):
             for child_element in element:
                 self._parse_recursive(element=child_element)
         elif element.tag == 'СвОКВЭДДоп':
-            additional_okveds = create_dict_from_database_model(okveds_shadow)
+            additional_okveds = create_dict_from_database_model(self._database_model)
             additional_okveds['inn'] = self.inn
             additional_okveds['ogrn'] = self.ogrn
             # additional_okveds['name'] = element.get('НаимОКВЭД')
@@ -194,16 +210,30 @@ class Tag_parser_ADDITIONAL_OKVEDS(Tag_parser_Base):
 
 
 
-class Tag_parser_SNO_UL(Tag_parser_Base):
-    def __init__(self):
-        self._database_model_name = 'sno_shadow'
-    @property
-    def _org_info(self, ) -> dict | list | None:
-        return create_dict_from_database_model(sno_shadow)
+class Tag_parser_LICENSES(Tag_parser_Base, Init_ogrn_inn_mixin):
+    def __init__(self, ):
+        self._database_model = licenses_shadow
+
+    def handle(self,
+               elements: etree._Element, ) -> dict[str, str | list[Any]] | None:
+        output = []
+        tablename = self._tablename
+
+        if not tablename: return None
+        self.inn, self.ogrn = (None, None)
+        for element in elements:
+            if self.initialize(element=element):
+                self.org_info = self._org_info
+                self._parse_recursive(element=element)
+                output += self.org_info
+            element.clear()
+        output = {'tablename': tablename, 'data': output}
+        return output
+
 
     @property
-    def _tablename(self, ) -> str | None:
-        return get_tablename_from_database_model(sno_shadow)
+    def _org_info(self, ) -> dict | list | None:
+        return []
 
 
     def _parse_recursive(self,
@@ -211,7 +241,37 @@ class Tag_parser_SNO_UL(Tag_parser_Base):
         if element.tag == 'Документ':
             for item in element:
                 self._parse_recursive(element=item)
-            element.clear()
+        elif element.tag == 'СвЛиценз':
+            licenses = create_dict_from_database_model(self._database_model)
+            licenses['inn'] = self.inn
+            licenses['ogrn'] = self.ogrn
+            licenses['num'] = element.get('НомЛиценз')
+            licenses['date'] = datetime.strptime(element.get('ДатаЛиценз'), '%d.%m.%Y').date() if element.get('ДатаЛиценз') else None
+            licenses['date_start'] = datetime.strptime(element.get('ДатаНачЛиценз'), '%d.%m.%Y').date() if element.get('ДатаНачЛиценз') else None
+            licenses['date_end'] = datetime.strptime(element.get('ДатаКонЛиценз'), '%d.%m.%Y').date()if element.get('ДатаКонЛиценз') else None
+            licenses['issued_by'] = element.get('ОргВыдЛиценз')
+            self.org_info.append(licenses)
+
+
+class Tag_parser_SNO_UL(Tag_parser_Base):
+    def __init__(self, ):
+        self._database_model = sno_shadow
+
+    # @property
+    # def _org_info(self, ) -> dict | list | None:
+    #     return create_dict_from_database_model(sno_shadow)
+    #
+    # @property
+    # def _tablename(self, ) -> str | None:
+    #     return get_tablename_from_database_model(sno_shadow)
+
+
+    def _parse_recursive(self,
+                         element: etree._Element, ):
+        if element.tag == 'Документ':
+            for item in element:
+                self._parse_recursive(element=item)
+            # element.clear()
 
         if element.tag == 'СведНП':
             self.org_info['inn'] = int(element.get('ИННЮЛ'))
@@ -227,7 +287,8 @@ class Tag_parser_SNO_UL(Tag_parser_Base):
 
 class Tag_parser_SNO_IP(Tag_parser_Base):
     def __init__(self):
-        self._database_model_name = 'sno_shadow'
+        self._database_model = sno_shadow
+
     @property
     def _org_info(self, ) -> dict | list | None:
         return create_dict_from_database_model(sno_shadow)
@@ -265,6 +326,11 @@ class Parser_Base(ABC):
     unzipper: Unzipper
     reader: File_reader
     tag_parser: Tag_parser_Base
+
+    @abstractmethod
+    def __init__(self, ):
+        self.unzipper = Unzipper()
+        self.reader = File_reader()
 
     def parse(self,
               file_dir: str | Path,
@@ -320,32 +386,30 @@ class Parser_Base(ABC):
 
 class Parser_RSMP_MAIN_INFO(Parser_Base):
     def __init__(self, ):
-        self.unzipper = Unzipper()
-        self.reader = File_reader()
         self.tag_parser = Tag_parser_OGRN_MAIN_INFO()
         super().__init__()
 
 
 class Parser_RSMP_ADDITIONAL_OKVEDS(Parser_Base):
     def __init__(self):
-        self.unzipper = Unzipper()
-        self.reader = File_reader()
         self.tag_parser = Tag_parser_ADDITIONAL_OKVEDS()
         super().__init__()
-        
+
+
+class Parser_RSMP_LICENSES(Parser_Base):
+    def __init__(self, ):
+        self.tag_parser = Tag_parser_LICENSES()
+        super().__init__()
+
 
 class Parser_SNO_UL(Parser_Base):
-    def __init__(self):
-        self.unzipper = Unzipper()
-        self.reader = File_reader()
+    def __init__(self, ):
         self.tag_parser = Tag_parser_SNO_UL()
         super().__init__()
 
 
 class Parser_SNO_IP(Parser_Base):
-    def __init__(self):
-        self.unzipper = Unzipper()
-        self.reader = File_reader()
+    def __init__(self, ):
         self.tag_parser = Tag_parser_SNO_IP()
         super().__init__()
 
@@ -360,7 +424,7 @@ if __name__ == '__main__':
         parser_rsmp_main_info = Parser_RSMP_MAIN_INFO()
         output = parser_rsmp_main_info.parse(
             file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-10082026-structure-12052026.zip', left=1,
-            right=0)
+            right=2)
         if output is None: print('Err')
         else:
             result = 0
@@ -374,7 +438,7 @@ if __name__ == '__main__':
         parser_rsmp_additional_okveds = Parser_RSMP_ADDITIONAL_OKVEDS()
         output = parser_rsmp_additional_okveds.parse(
             file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-10082026-structure-12052026.zip', left=1,
-            right=0)
+            right=2)
         if output is None: print('Err')
         else:
             for item in output:
@@ -403,9 +467,20 @@ if __name__ == '__main__':
                 print(item)
                 ...
 
+    def _test_parser_licenses():
+        parser_licenses = Parser_RSMP_LICENSES()
+        output = parser_licenses.parse(
+            file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-10082026-structure-12052026.zip', left=1,
+            right=2)
+        if output is None: print('Err')
+        else:
+            for item in output:
+                print(item['data'])
+
 
     # _test_parser_RSMP()
-    _test_parser_okveds()
+    # _test_parser_okveds()
+    # _test_parser_licenses()
     # _test_parser_sno_ul()
     # _test_parser_sno_ip()
     ...

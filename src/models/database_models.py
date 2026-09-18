@@ -156,6 +156,27 @@ class relevant_okveds_shadow(relevant_okveds_mixin, Base):
 
 
 
+class licenses_mixin:
+    id: Mapped[int] = mapped_column(BigInteger,
+                               primary_key=True,
+                               autoincrement=True)
+    inn: Mapped[int] = mapped_column(BigInteger)
+    ogrn: Mapped[int] = mapped_column(BigInteger)
+    num: Mapped[str]
+    date: Mapped[datetime | None]
+    date_start: Mapped[datetime | None]
+    date_end: Mapped[datetime | None]
+
+
+class licenses(licenses_mixin, Base):
+    __tablename__ = 'licenses'
+
+
+class licenses_shadow(licenses_mixin, Base):
+    __tablename__ = 'licenses_shadow'
+
+
+
 models_dict = {x.__name__: x for x in Base.__subclasses__()}
 models_primary_keys_dict = {x.__name__: [inspect(x).primary_key[0].key]
                             for x in Base.__subclasses__() if inspect(x).primary_key}    # Словарь из первых первичных ключей в таблице
