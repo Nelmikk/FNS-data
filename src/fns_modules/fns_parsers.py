@@ -71,8 +71,9 @@ class Tag_parser_Base(ABC):
 
 
 class Tag_parser_OGRN_MAIN_INFO(Tag_parser_Base):
-    def __init__(self):
-        self._database_model = fns_main_info_shadow
+    _database_model = fns_main_info_shadow
+    # def __init__(self):
+    #     self._database_model = fns_main_info_shadow
 
     # @property
     # def _org_info(self, ) -> dict | None:
@@ -141,8 +142,9 @@ class Tag_parser_OGRN_MAIN_INFO(Tag_parser_Base):
 
 
 class Tag_parser_ADDITIONAL_OKVEDS(Tag_parser_Base, Init_ogrn_inn_mixin):
-    def __init__(self):
-        self._database_model = okveds_shadow
+    _database_model = okveds_shadow
+    # def __init__(self):
+    #     self._database_model = okveds_shadow
 
     def handle(self,
                elements: etree._Element, ) -> dict[str, str | list[Any]] | None:
@@ -211,8 +213,9 @@ class Tag_parser_ADDITIONAL_OKVEDS(Tag_parser_Base, Init_ogrn_inn_mixin):
 
 
 class Tag_parser_LICENSES(Tag_parser_Base, Init_ogrn_inn_mixin):
-    def __init__(self, ):
-        self._database_model = licenses_shadow
+    _database_model = licenses_shadow
+    # def __init__(self, ):
+    #     self._database_model = licenses_shadow
 
     def handle(self,
                elements: etree._Element, ) -> dict[str, str | list[Any]] | None:
@@ -254,8 +257,9 @@ class Tag_parser_LICENSES(Tag_parser_Base, Init_ogrn_inn_mixin):
 
 
 class Tag_parser_SNO_UL(Tag_parser_Base):
-    def __init__(self, ):
-        self._database_model = sno_shadow
+    _database_model = sno_shadow
+    # def __init__(self, ):
+    #     self._database_model = sno_shadow
 
     # @property
     # def _org_info(self, ) -> dict | list | None:
@@ -286,8 +290,9 @@ class Tag_parser_SNO_UL(Tag_parser_Base):
 
 
 class Tag_parser_SNO_IP(Tag_parser_Base):
-    def __init__(self):
-        self._database_model = sno_shadow
+    _database_model = sno_shadow
+    # def __init__(self, ):
+    #     self._database_model = sno_shadow
 
     @property
     def _org_info(self, ) -> dict | list | None:
@@ -329,6 +334,7 @@ class Parser_Base(ABC):
 
     @abstractmethod
     def __init__(self, ):
+        self.tag_parser = self.tag_parser()
         self.unzipper = Unzipper()
         self.reader = File_reader()
 
@@ -385,32 +391,39 @@ class Parser_Base(ABC):
 
 
 class Parser_RSMP_MAIN_INFO(Parser_Base):
+    tag_parser = Tag_parser_OGRN_MAIN_INFO
     def __init__(self, ):
-        self.tag_parser = Tag_parser_OGRN_MAIN_INFO()
+        # self.tag_parser = self.tag_parser()
         super().__init__()
 
 
 class Parser_RSMP_ADDITIONAL_OKVEDS(Parser_Base):
-    def __init__(self):
-        self.tag_parser = Tag_parser_ADDITIONAL_OKVEDS()
+    tag_parser = Tag_parser_ADDITIONAL_OKVEDS
+    def __init__(self, ):
+        # self.tag_parser = self.tag_parser()
         super().__init__()
 
 
 class Parser_RSMP_LICENSES(Parser_Base):
+    tag_parser = Tag_parser_LICENSES
+
     def __init__(self, ):
-        self.tag_parser = Tag_parser_LICENSES()
+        # self.tag_parser = self.tag_parser()
         super().__init__()
 
 
 class Parser_SNO_UL(Parser_Base):
+    tag_parser = Tag_parser_SNO_UL
+
     def __init__(self, ):
-        self.tag_parser = Tag_parser_SNO_UL()
+        # self.tag_parser = self.tag_parser()
         super().__init__()
 
 
 class Parser_SNO_IP(Parser_Base):
+    tag_parser = Tag_parser_SNO_IP
     def __init__(self, ):
-        self.tag_parser = Tag_parser_SNO_IP()
+#         self.tag_parser = self.tag_parser()
         super().__init__()
 
 

@@ -1,5 +1,6 @@
 import sqlalchemy
 from sqlalchemy.orm import load_only
+from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio.session import async_sessionmaker
@@ -89,21 +90,21 @@ async def select_additional_okveds_by_ogrn_async(ogrn: int,
         return result
 
 
-def drop_all_tables_using_models():
+def drop_all_tables_using_models(session: sessionmaker = sync_session, ):
     """
     Дропает все таблицы, объявленные в database_models.py (которые наследуются от Base).
     :return:
     """
-    with sync_session().connection() as connection:
+    with session().connection() as connection:
         Base.metadata.drop_all(bind=connection)
         connection.commit()
 
 
-def create_all_tables_from_models():
+def create_all_tables_from_models(session: sessionmaker = sync_session, ):
     """
     Создание всех таблиц, объявленных в database_models.py (которые наследуются от Base).
     :return:
     """
-    with sync_session().connection() as connection:
+    with session().connection() as connection:
         Base.metadata.create_all(bind=connection)
         connection.commit()

@@ -1,7 +1,7 @@
 from src.database_modules.database_sessions import batch_data, async_engine, sync_engine
-from src.models.database_models import models_dict
+from src.models.database_models import models_dict, Base
 
-from sqlalchemy import insert, MetaData, inspect, text
+from sqlalchemy import insert, inspect, text
 from sqlalchemy.ext.asyncio.engine import AsyncEngine
 from sqlalchemy.engine.base import Engine
 
@@ -10,27 +10,103 @@ from sqlalchemy.engine.base import Engine
 @batch_data(batch_size=16_000)
 async def insert_data_async(tablename: str,
                             values: list[dict],
-                            engine: AsyncEngine = None, ):
-    if not engine:
-        engine = async_engine
-
+                            engine: AsyncEngine = async_engine, ):
     async with engine.connect() as connection:
         query = insert(models_dict[tablename].__table__)
         await connection.execute(query, values)
         await connection.commit()
     ...
 
+# async def rename_tables_async(engine: AsyncEngine | None,
+#                               *args, ):
+#     """
+#     Обновляет название таблиц в одной транзакции.
+#
+#     :param engine:
+#     :param args:        tuple(old_tablename: str, new_tablename: str).
+#     :return:
+#     """
+#     engine = engine if engine else async_engine
+#     async with engine.connect() as connection:
+#         for old_name, new_name in args:
+#             if old_name not in [i.__tablename__ for i in Base.__subclasses__()]:
+#                 continue
+#
+#             query = text(f"ALTER TABLE {old_name} RENAME TO {new_name};")
+#             await connection.execute(query)
+#         await connection.commit()
 
-def drop_all_tables_using_metadata(connection_tool: Engine | None, ):
-    """
-    Дропает все таблицы, которые есть в схеме.
-    :return:
-    """
-    engine = connection_tool if connection_tool else sync_engine
-    metadata = MetaData()
-    metadata.reflect(bind=engine)
-    metadata.drop_all(bind=engine)
+
+async def replace_tables_async(old_table_name: str,
+                               new_table_name: str,
+                               engine: AsyncEngine = async_engine, ):
+    drop_query = text(f'DROP TABLE IF EXISTS {old_table_name};')
+    rename_query = text(f'ALTER TABLE {new_table_name} RENAME TO {old_table_name};')
+    analyze_query = text(f'ANALYZE {old_table_name};')
+
+    async with engine.connect() as connection:
+        await connection.execute(drop_query)
+        await connection.execute(rename_query)
+        await connection.execute(analyze_query)
+        await connection.commit()
+
+
+def rename_tables_async(old_tablename: str,
+                        new_tablename: str,
+                        engine: Engine = sync_engine, ):
+    drop_temp_table(tablename=old_tablename, engine=engine)
+    rename_old_table_query = text(f'ALTER TABLE {old_tablename} RENAME TO TEMPORARY_TABLE_{old_tablename};')
+    rename_new_table_query = text(f'ALTER TABLE {new_tablename} RENAME TO {old_tablename};')
+    analyze_query = text(f'ANALYZE {old_tablename};')
+
+    with engine.connect() as connection:
+        connection.execute(rename_old_table_query)
+        connection.execute(rename_new_table_query)
+        connection.execute(analyze_query)
+        connection.commit()
+
+
+def drop_temp_table(tablename: str,
+                          engine: Engine = sync_engine, ):
+
+    with engine.connect() as connection:
+        connection.execute(text(f'DROP TABLE IF EXISTS TEMPORARY_TABLE_{tablename};'))
+        connection.commit()
+
+
+
+def create_index_async(index_name: str,
+                             column_index: str,
+                             table: type[Base],
+                             engine: Engine = sync_engine,
+                             index_type: str = 'btree'):
+    if not table in Base.__subclasses__():
+        return
+
+
+    query = text(f'CREATE INDEX {index_name} ON {table.__tablename__} USING {index_type}({column_index});')
+    with engine.connect() as connection:
+        connection.execute(query)
+        connection.commit()
+
+# def drop_all_tables_using_metadata(engine: Engine = sync_engine, ):
+#     """
+#     Дропает все таблицы, которые есть в схеме.
+#     :return:
+#     """
+#     # metadata = MetaData()
+#     # metadata.reflect(bind=engine)
+#     # metadata.drop_all(bind=engine)
+#     database_models.Base.metadata.drop_all(bind=engine,
+#                                            tables=[i.__table__ for i in database_models.Base.__subclasses__()])
+
     ...
+
+
+# def reset_tables(engine: Engine = sync_engine,
+#                  tables=list[type[database_models.Base]], ):
+#     database_models.Base.metadata.drop_all()
+#     ...
 
 
 async def switch_schema(engine: AsyncEngine,
