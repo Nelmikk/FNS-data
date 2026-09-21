@@ -17,6 +17,16 @@ async def insert_data_async(tablename: str,
         await connection.commit()
     ...
 
+@batch_data(batch_size=16_000)
+def insert_data(tablename: str,
+                values: list[dict],
+                engine: Engine = sync_engine, ):
+    with engine.connect() as connection:
+        query = insert(models_dict[tablename].__table__)
+        connection.execute(query, values)
+        connection.commit()
+    ...
+
 # async def rename_tables_async(engine: AsyncEngine | None,
 #                               *args, ):
 #     """
@@ -51,7 +61,7 @@ async def replace_tables_async(old_table_name: str,
         await connection.commit()
 
 
-def rename_tables_async(old_tablename: str,
+def rename_tables(old_tablename: str,
                         new_tablename: str,
                         engine: Engine = sync_engine, ):
     drop_temp_table(tablename=old_tablename, engine=engine)
@@ -67,7 +77,7 @@ def rename_tables_async(old_tablename: str,
 
 
 def drop_temp_table(tablename: str,
-                          engine: Engine = sync_engine, ):
+                    engine: Engine = sync_engine, ):
 
     with engine.connect() as connection:
         connection.execute(text(f'DROP TABLE IF EXISTS TEMPORARY_TABLE_{tablename};'))
@@ -75,7 +85,7 @@ def drop_temp_table(tablename: str,
 
 
 
-def create_index_async(index_name: str,
+def create_index(index_name: str,
                              column_index: str,
                              table: type[Base],
                              engine: Engine = sync_engine,

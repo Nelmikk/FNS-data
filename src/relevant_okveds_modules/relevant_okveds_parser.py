@@ -1,29 +1,15 @@
-import requests
-import asyncio
-from sqlalchemy.ext.asyncio import create_async_engine
-from src.database_modules.core import insert_data_async
-from src.database_modules.database_conf import settings_super_user
+from typing import Any
+
 from src.models.other_models import get_tablename_from_database_model
 from src.models.database_models import relevant_okveds_shadow
 
 
-class Updater_okveds:
+class Parser_relevant_okveds:
     def __init__(self, ):
-        ...
+        self._database_model = relevant_okveds_shadow
 
 
-    async def update_and_insert(self, ) -> None:
-        relevant_okveds = self.get_relevant_data()
-        if not relevant_okveds['data']:
-            return None
-        engine = create_async_engine(url=settings_super_user.DATABASE_URL_ASYNC, echo=False, )
-        await insert_data_async(tablename=relevant_okveds['tablename'],
-                                values=relevant_okveds['data'],
-                                engine=engine)
-
-
-
-    def get_relevant_data(self, ) -> dict[str, str | list[dict[str, str]]]:
+    def parse(self, xlsx_file_data: str) -> dict[str, str | None | list[Any]]:
         """
         Скачивает xlsx-файл с https://classifikators.ru, парсит его и возвращает словарь вида:
 
@@ -42,17 +28,14 @@ class Updater_okveds:
 
             В словарях буква, код, наименование всех актуальных ОКВЭДов.
 
-            Юзается для занесения данных в БД.
-
         :return:
         """
-        tablename = get_tablename_from_database_model(relevant_okveds_shadow)
+        tablename = get_tablename_from_database_model(self._database_model)
         if tablename is None:
-            print(f'The tablename was not found using model {relevant_okveds_shadow.__name__}')
+            print(f'The tablename was not found using model {self._database_model.__name__}')
         output = {'tablename': tablename, 'data': []}
         try:
-            xlsx_file_data = requests.get('https://classifikators.ru/assets/downloads/okved/okved.csv')
-            xlsx_file_data = xlsx_file_data.content.decode('utf-8')
+
             for row in xlsx_file_data.split(sep='\n'):
                 row = row.replace('"', '').split(sep=';', maxsplit=2)
                 if not all(i for i in row):
@@ -67,8 +50,3 @@ class Updater_okveds:
 
         finally:
             return output
-
-
-
-
-asyncio.run(Updater_okveds().update_and_insert())

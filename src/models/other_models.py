@@ -19,7 +19,7 @@ def create_dict_from_database_model(database_model: type[Base], ) -> dict | None
                 }
 
         Юзается след образом:
-            var = create_dict_from_database_model(database_model: type[Base] = database_model_class)
+            var = create_dict_from_database_model(_database_model: type[Base] = database_model_class)
 
     :param database_model:
     :return dict | None:
@@ -35,7 +35,7 @@ def get_tablename_from_database_model(database_model: type[Base], ) -> str | Non
     Если модель не объявлена, возвращает None.
 
         Юзается след образом:
-            table_name = get_tablename_from_database_model(database_model: type[Base] = database_model_class)
+            table_name = get_tablename_from_database_model(_database_model: type[Base] = database_model_class)
 
     :param database_model:
     :return str | None:

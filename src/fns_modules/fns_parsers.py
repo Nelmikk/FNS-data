@@ -25,7 +25,7 @@ class Init_ogrn_inn_mixin:
 
 
 class Tag_parser_Base(ABC):
-    _database_model: type[Base]
+    _database_model: type[DeclarativeBase]
     def handle(self,
                elements: etree._Element, ) -> dict[str, str | list[Any]] | None:
         output = []

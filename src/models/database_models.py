@@ -15,7 +15,7 @@ class Base_index(TypedDict):
 
 class Base(DeclarativeBase):
     _indexes: list[Base_index]
-    __nonshadow_tablename__: str
+    __nonshadow_table__: DeclarativeBase
     ...
 
 
@@ -91,7 +91,7 @@ class fns_main_info(fns_main_info_mixin, Base):
 
 class fns_main_info_shadow(fns_main_info_mixin, Base):
     __tablename__ = 'fns_main_info_shadow'
-    __nonshadow_tablename__ = fns_main_info.__tablename__
+    __nonshadow_table__ = fns_main_info
 
 
 class sno_mixin:
@@ -116,7 +116,7 @@ class sno(sno_mixin, Base):
 
 class sno_shadow(sno_mixin, Base):
     __tablename__ = 'sno_shadow'
-    __nonshadow_tablename__ = sno.__tablename__
+    __nonshadow_table__ = sno
 
 
 class okveds_mixin:
@@ -148,7 +148,7 @@ class okveds(okveds_mixin, Base):
 
 class okveds_shadow(okveds_mixin, Base):
     __tablename__ = 'okveds_shadow'
-    __nonshadow_tablename__ = okveds.__tablename__
+    __nonshadow_table__ = okveds
 
 
 class relevant_okveds_mixin:
@@ -171,7 +171,7 @@ class relevant_okveds(relevant_okveds_mixin, Base):
 
 class relevant_okveds_shadow(relevant_okveds_mixin, Base):
     __tablename__ = 'relevant_okveds_shadow'
-    __nonshadow_tablename__ = relevant_okveds.__tablename__
+    __nonshadow_table__ = relevant_okveds
 
 
 
@@ -195,7 +195,7 @@ class licenses(licenses_mixin, Base):
 
 class licenses_shadow(licenses_mixin, Base):
     __tablename__ = 'licenses_shadow'
-    __nonshadow_tablename__ = licenses.__tablename__
+    __nonshadow_table__ = licenses
 
 
 
