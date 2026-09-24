@@ -1,11 +1,7 @@
 from pathlib import Path
-from typing import Generator, Callable
-from functools import wraps
+from typing import Generator
 from zipfile import ZipFile
 from lxml import etree
-
-from src.fns_modules.fns_errors import DirectoryDoesNotExist, WrongFileExtension
-
 
 
 # def check_file(expected_extension: str | list[str], ) -> Callable:

@@ -1,4 +1,5 @@
 from src.models.database_models import Base
+from typing import TypedDict, Any
 
 
 class FNS_DATA:
@@ -43,6 +44,17 @@ def get_tablename_from_database_model(database_model: type[Base], ) -> str | Non
     try: return database_model.__tablename__
     except: return None
     ...
+
+
+
+
+
+
+class Parser_output(TypedDict):
+    tablename: str
+    data: list[dict[str, Any]]
+    ...
+
 
 # dict_from_database_model_name = {table.__tablename__:
 #                                      {column.name: False if column.type.python_type is bool else None for column in table.__table__.columns if column.name != 'id'}

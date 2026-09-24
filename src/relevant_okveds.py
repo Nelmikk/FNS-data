@@ -1,8 +1,8 @@
 from src.relevant_okveds_modules import *
-from typing import Any
 from sqlalchemy.engine import create_engine
 
-from src.database_modules.core import rename_tables, drop_temp_table
+from src.models.other_models import Parser_output
+from src.database_modules.core import rename_tables, drop_temp_table, create_index, rename_index
 from src.database_modules.orm import drop_tables_from_models, create_tables_from_models
 from src.database_modules.database_conf import settings_super_user
 from src.database_modules.core import insert_data
@@ -49,12 +49,17 @@ class Relevant_okveds_updater:
         self._insert_data(data=data)
 
         if rewrite_table:
+            self._set_indexes()
+
             self._replace_tables()
+
             self._drop_temp_table()
+
+            self._rename_index()
 
 
     def _insert_data(self,
-                     data: dict[str, str | None | list[Any]], ):
+                     data: Parser_output, ):
         """
         Запись данных в shadow_table.
         :param data: 
@@ -68,19 +73,32 @@ class Relevant_okveds_updater:
     def _initialize_table(self, ):
         drop_tables_from_models(tables_models=[self._parser._database_model])
         create_tables_from_models(tables_models=[self._parser._database_model,
-                                                 self._parser._database_model.__nonshadow_table__])
+                                                 self._parser._database_model.non_shadow_table])
 
 
-    def _parse(self, xlsx_file_data: str, ) -> dict[str, str | None | list[Any]]:
+    def _parse(self, xlsx_file_data: str, ) -> Parser_output:
         return self._parser.parse(xlsx_file_data=xlsx_file_data)
 
 
     def _replace_tables(self, ):
         rename_tables(new_tablename=self._parser._database_model.__tablename__,
-                      old_tablename=self._parser._database_model.__nonshadow_table__.__tablename__)
+                      old_tablename=self._parser._database_model.non_shadow_table.__tablename__)
 
     def _drop_temp_table(self, ):
-        drop_temp_table(tablename=self._parser._database_model.__nonshadow_table__.__tablename__)
+        drop_temp_table(tablename=self._parser._database_model.non_shadow_table.__tablename__)
 
+    def _set_indexes(self, ):
+        for index_item in self._parser._database_model.DB_indexes:
+            create_index(index_name=index_item['index_name'],
+                         column_index=index_item['column_index'],
+                         table=self._parser._database_model,
+                         index_type=index_item['index_type'])
+
+    def _rename_index(self, ):
+        for index_item in self._parser._database_model.DB_indexes:
+            old_index_name = index_item['index_name']
+            new_index_name = [i['index_name'] for i in self._parser._database_model.non_shadow_table.DB_indexes
+                              if i['column_index'] == index_item['column_index']][0]
+            rename_index(old_index_name=old_index_name, new_index_name=new_index_name)
 
 

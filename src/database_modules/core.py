@@ -1,4 +1,5 @@
-from src.database_modules.database_sessions import batch_data, async_engine, sync_engine
+from src.database_modules.database_sessions import async_engine, sync_engine
+from src.database_modules.database_misc import batch_data
 from src.models.database_models import models_dict, Base
 
 from sqlalchemy import insert, inspect, text
@@ -62,8 +63,8 @@ async def replace_tables_async(old_table_name: str,
 
 
 def rename_tables(old_tablename: str,
-                        new_tablename: str,
-                        engine: Engine = sync_engine, ):
+                  new_tablename: str,
+                  engine: Engine = sync_engine, ):
     drop_temp_table(tablename=old_tablename, engine=engine)
     rename_old_table_query = text(f'ALTER TABLE {old_tablename} RENAME TO TEMPORARY_TABLE_{old_tablename};')
     rename_new_table_query = text(f'ALTER TABLE {new_tablename} RENAME TO {old_tablename};')
@@ -86,15 +87,36 @@ def drop_temp_table(tablename: str,
 
 
 def create_index(index_name: str,
-                             column_index: str,
-                             table: type[Base],
-                             engine: Engine = sync_engine,
-                             index_type: str = 'btree'):
-    if not table in Base.__subclasses__():
+                 column_index: str,
+                 table: type[Base],
+                 engine: Engine = sync_engine,
+                 index_type: str = 'btree'):
+    """
+    Удаляет индекс, если он существует и создает его.
+    :param index_name:
+    :param column_index:
+    :param table:
+    :param engine:
+    :param index_type:
+    :return:
+    """
+    if table not in Base.__subclasses__():
         return
 
+    drop_query = text(f'DROP INDEX IF EXISTS {index_name};')
 
-    query = text(f'CREATE INDEX {index_name} ON {table.__tablename__} USING {index_type}({column_index});')
+    create_query = text(f'CREATE INDEX {index_name} ON {table.__tablename__} USING {index_type}({column_index});')
+    with engine.connect() as connection:
+        connection.execute(drop_query)
+        connection.execute(create_query)
+        connection.commit()
+
+
+def rename_index(old_index_name: str,
+                 new_index_name: str,
+                 engine: Engine = sync_engine, ):
+    query = text(f'ALTER INDEX IF EXISTS {old_index_name} RENAME TO {new_index_name};')
+
     with engine.connect() as connection:
         connection.execute(query)
         connection.commit()
@@ -110,13 +132,12 @@ def create_index(index_name: str,
 #     database_models.Base.metadata.drop_all(bind=engine,
 #                                            tables=[i.__table__ for i in database_models.Base.__subclasses__()])
 
-    ...
 
 
 # def reset_tables(engine: Engine = sync_engine,
 #                  tables=list[type[database_models.Base]], ):
 #     database_models.Base.metadata.drop_all()
-#     ...
+
 
 
 async def switch_schema(engine: AsyncEngine,

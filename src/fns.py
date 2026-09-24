@@ -2,7 +2,7 @@ import asyncio
 import multiprocessing as mp
 import warnings
 from abc import ABC
-from typing import Any, Final, Generator
+from typing import Final, Generator
 from pathlib import Path
 
 from zipfile import ZipFile
@@ -10,11 +10,13 @@ import time
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 
-from src.database_modules.core import insert_data_async, create_index, replace_tables_async, rename_tables, drop_temp_table
+from src.database_modules.core import insert_data_async, create_index, rename_tables, drop_temp_table, rename_index
 from src.database_modules.orm import drop_tables_from_models, create_tables_from_models
 from src.database_modules.database_conf import settings_super_user
 
-from src.fns_modules.fns_downloaders import Downloader
+from src.models.other_models import Parser_output
+
+from src.fns_modules.fns_downloaders import Downloader_Base
 from src.fns_modules.fns_parsers import Parser_Base, Parser_SNO_UL, Parser_SNO_IP, Parser_RSMP_MAIN_INFO, Parser_RSMP_ADDITIONAL_OKVEDS, Parser_RSMP_LICENSES
 from src.fns_modules.fns_downloaders import Downloader_RSMP, Downloader_SNR
 
@@ -74,9 +76,6 @@ async def _parse_and_insert(parser: type[Parser_Base],
                                left=left,
                                right=right)
 
-    if parsed_data is None:
-        return
-
     # Для каждого процесса надо создавать отдельный пул соединений.
     async_engine = create_async_engine(url=settings_super_user.DATABASE_URL_ASYNC,
                                        echo=False,
@@ -105,8 +104,8 @@ async def _parse_and_insert(parser: type[Parser_Base],
 
 
 async def _insert_data(async_engine: AsyncEngine,
-                       data: dict[str, str | list[Any]],
-                       semaphore: asyncio.Semaphore) -> None:
+                       data: Parser_output,
+                       semaphore: asyncio.Semaphore, ) -> None:
         """
         Занесение данных в БД.
 
@@ -139,7 +138,7 @@ class Base_FNS_data_updater(ABC):
 
     # Класс для скачивания документов, в __init__ создается экземпляр.
     #   Не задается и не изменяется после инициилизации.
-    _downloader: Downloader
+    _downloader: Downloader_Base
 
     # Класс для парсинга данных, экземпляры создаются отдельно для каждого процесса.
     #   Не задается и не изменяется после инициилизации.
@@ -168,9 +167,9 @@ class Base_FNS_data_updater(ABC):
 
         :param cpu_count:                   Optional. принимает int.
                                                 Количество создаваемых процессов.
-                                                Не позволит создать больше, чем есть на машине.
+                                                 Не позволит создать больше, чем есть на машине.
         """
-        print(f'\n{self.__class__.__name__} is updating data\n')
+        print(f'\n\n{self.__class__.__name__} is updating data\n')
         self._semaphore_count = semaphore_count if semaphore_count > 0 else self.__semaphore_count
         if not (0 < cpu_count <= mp.cpu_count()):
             warnings.warn('The argument "cpu_count" is set to base value: 1')
@@ -240,8 +239,9 @@ class Base_FNS_data_updater(ABC):
             self._replace_tables()
 
             self._drop_temp_table()
+
+            self._rename_index()
         return
-        ...
 
 
     def download(self, ) -> Path | None:
@@ -286,24 +286,31 @@ class Base_FNS_data_updater(ABC):
     def _initialize_table(self, ):
         drop_tables_from_models(tables_models=[self._parser.tag_parser._database_model])
         create_tables_from_models(tables_models=[self._parser.tag_parser._database_model,
-                                                 self._parser.tag_parser._database_model.__nonshadow_table__])
+                                                 self._parser.tag_parser._database_model.non_shadow_table])
         ...
 
     def _set_indexes(self, ):
-        for index_item in self._parser.tag_parser._database_model._indexes:
-            create_index(index_name=index_item['index_name'], column_index=index_item['column_index'],
-                         table=self._parser.tag_parser._database_model.__tablename__,
+        for index_item in self._parser.tag_parser._database_model.DB_indexes:
+            create_index(index_name=index_item['index_name'],
+                         column_index=index_item['column_index'],
+                         table=self._parser.tag_parser._database_model,
                          index_type=index_item['index_type'])
             ...
 
     def _replace_tables(self, ):
         rename_tables(new_tablename=self._parser.tag_parser._database_model.__tablename__,
-                      old_tablename=self._parser.tag_parser._database_model.__nonshadow_table__.__tablename__)
+                      old_tablename=self._parser.tag_parser._database_model.non_shadow_table.__tablename__)
 
     def _drop_temp_table(self, ):
-        drop_temp_table(tablename=self._parser.tag_parser._database_model.__nonshadow_table__.__tablename__)
+        drop_temp_table(tablename=self._parser.tag_parser._database_model.non_shadow_table.__tablename__)
         ...
 
+    def _rename_index(self, ):
+        for index_item in self._parser.tag_parser._database_model.DB_indexes:
+            old_index_name = index_item['index_name']
+            new_index_name = [i['index_name'] for i in self._parser.tag_parser._database_model.non_shadow_table.DB_indexes
+                              if i['column_index'] == index_item['column_index']][0]
+            rename_index(old_index_name=old_index_name, new_index_name=new_index_name)
 
 def _xml_files_num(zip_file_dir: Path, ) -> int:
     """
@@ -314,7 +321,6 @@ def _xml_files_num(zip_file_dir: Path, ) -> int:
     with ZipFile(zip_file_dir) as zf:
         xml_files_num = len(zf.namelist())
     return xml_files_num
-    ...
 
 
 class FNS_data_updater_RSMP_MAIN_INFO(Base_FNS_data_updater):
@@ -386,67 +392,3 @@ class FNS_data_updater_SNO_IP(Base_FNS_data_updater):
         super().__init__(cpu_count=cpu_count,
                          semaphore_count=semaphore_count)
 
-
-
-
-
-def __fns_new():
-
-    st = time.perf_counter()
-    cpu_count = 8
-    semaphore_count = 10
-
-    updater = FNS_data_updater_RSMP_MAIN_INFO(cpu_count, semaphore_count)
-    file_dir = updater.download()
-    if file_dir is not None:
-        updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True)
-
-    updater = FNS_data_updater_RSMP_ADDITIONAL_OKVEDS(cpu_count, semaphore_count)
-    if file_dir is not None:
-        updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True)
-
-    updater = FNS_data_updater_LICENSES(cpu_count, semaphore_count)
-    if file_dir is not None:
-        updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True)
-
-    updater = FNS_data_updater_SNO(cpu_count, semaphore_count)
-    file_dir = updater.download()
-    if file_dir is not None:
-        updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True)
-
-    updater = FNS_data_updater_SNO_IP(cpu_count, semaphore_count)
-    file_dir = updater.download()
-    if file_dir is not None:
-        updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True)
-
-
-    # FNS_data_updater_RSMP_ADDITIONAL_OKVEDS(cpu_count=8,
-    #                                         semaphore_count=10).update_data(
-    #     file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-10082026-structure-12052026.zip',
-    #     delete_file_after_update=False,
-    #     rewrite_table=True)
-    #
-    # FNS_data_updater_LICENSES(cpu_count=8,
-    #                           semaphore_count=10).update_data(
-    #     file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-10082026-structure-12052026.zip',
-    #     delete_file_after_update=False,
-    #     rewrite_table=True)
-    #
-    # FNS_data_updater_SNO(cpu_count=8,
-    #                      semaphore_count=10).update_data(
-    #     file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-20260625-structure-20230425.zip',
-    #     delete_file_after_update=False,
-    #     rewrite_table=False)
-    #
-    # FNS_data_updater_SNO_IP(cpu_count=8,
-    #                         semaphore_count=10).update_data(
-    #     file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-20260625-structure-20241025.zip',
-    #     delete_file_after_update=False,
-    #     rewrite_table=True)
-
-    print('\n---\n', time.perf_counter() - st, ' seconds passed.')
-
-
-if __name__ == '__main__':
-    __fns_new()
-    ...

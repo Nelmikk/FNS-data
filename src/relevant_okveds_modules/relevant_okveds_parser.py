@@ -1,6 +1,7 @@
 from typing import Any
 
-from src.models.other_models import get_tablename_from_database_model
+from src.errors.database_errors import TableNotFound
+from src.models.other_models import get_tablename_from_database_model, Parser_output
 from src.models.database_models import relevant_okveds_shadow
 
 
@@ -9,31 +10,16 @@ class Parser_relevant_okveds:
         self._database_model = relevant_okveds_shadow
 
 
-    def parse(self, xlsx_file_data: str) -> dict[str, str | None | list[Any]]:
+    def parse(self, xlsx_file_data: str) -> Parser_output:
         """
-        Скачивает xlsx-файл с https://classifikators.ru, парсит его и возвращает словарь вида:
-
-            {
-                'tablename': str,
-                'data' :
-                [
-                    {
-                        'letter': str,
-                        'code': str,
-                        'name': str,
-                    },
-                ]
-            ...
-            }
-
-            В словарях буква, код, наименование всех актуальных ОКВЭДов.
+        Возвращает данные всех актуальных ОКВЭДов.
 
         :return:
         """
         tablename = get_tablename_from_database_model(self._database_model)
         if tablename is None:
-            print(f'The tablename was not found using model {self._database_model.__name__}')
-        output = {'tablename': tablename, 'data': []}
+            raise TableNotFound
+        output = Parser_output(tablename=tablename, data=[])
         try:
 
             for row in xlsx_file_data.split(sep='\n'):

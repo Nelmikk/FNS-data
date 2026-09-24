@@ -14,10 +14,14 @@ class Base_index(TypedDict):
 
 
 class Base(DeclarativeBase):
-    _indexes: list[Base_index]
-    __nonshadow_table__: DeclarativeBase
+    DB_indexes: tuple[Base_index] = tuple()
     ...
 
+class Base_shadow_table:
+    """
+    Добавляется для моделей shadow таблиц.
+    """
+    non_shadow_table: type[Base]
 
 # class kadarbitr_cases(Base):
 #     __tablename__ = 'kadarbitr_cases'
@@ -72,9 +76,6 @@ class fns_main_info_mixin:
     district: Mapped[str] = mapped_column(nullable=True)
     area: Mapped[str] = mapped_column(nullable=True)
 
-    _indexes = [Base_index(index_name='inn_index', column_index='inn', index_type='hash'),
-                Base_index(index_name='ogrn_index', column_index='ogrn', index_type='hash')]
-
     # __table_args__ = (
     #     Index('index_inn_main_info',
     #           'inn',
@@ -88,10 +89,15 @@ class fns_main_info_mixin:
 class fns_main_info(fns_main_info_mixin, Base):
     __tablename__ = 'fns_main_info'
 
+    DB_indexes = [Base_index(index_name=f'inn_index_fns_main_info', column_index='inn', index_type='btree'),
+                  Base_index(index_name='ogrn_index_fns_main_info', column_index='ogrn', index_type='btree')]
 
-class fns_main_info_shadow(fns_main_info_mixin, Base):
+
+class fns_main_info_shadow(fns_main_info_mixin, Base, Base_shadow_table):
     __tablename__ = 'fns_main_info_shadow'
-    __nonshadow_table__ = fns_main_info
+    non_shadow_table = fns_main_info
+    DB_indexes = [Base_index(index_name=f'inn_index_fns_main_info_shadow', column_index='inn', index_type='btree'),
+                  Base_index(index_name='ogrn_index_fns_main_info_shadow', column_index='ogrn', index_type='btree')]
 
 
 class sno_mixin:
@@ -107,16 +113,19 @@ class sno_mixin:
     psn: Mapped[bool]
     npd: Mapped[bool]
 
-    _indexes = [Base_index(index_name='inn_index', column_index='inn', index_type='hash'), ]
+    # _indexes = [Base_index(index_name='inn_index', column_index='inn', index_type='hash'), ]
 
 
 class sno(sno_mixin, Base):
     __tablename__ = 'sno'
+    DB_indexes = [Base_index(index_name=f'inn_index_fns_sno', column_index='inn', index_type='btree'), ]
 
 
-class sno_shadow(sno_mixin, Base):
+class sno_shadow(sno_mixin, Base, Base_shadow_table):
     __tablename__ = 'sno_shadow'
-    __nonshadow_table__ = sno
+    non_shadow_table = sno
+
+    DB_indexes = [Base_index(index_name=f'inn_index_fns_sno_shadow', column_index='inn', index_type='btree'), ]
 
 
 class okveds_mixin:
@@ -130,7 +139,7 @@ class okveds_mixin:
     # name: Mapped[str]
     code: Mapped[str]
 
-    _indexes = [Base_index(index_name='inn_index', column_index='inn', index_type='hash')]
+    # _indexes = [Base_index(index_name='inn_index', column_index='inn', index_type='hash')]
 
     # __table_args__ = (
     #     Index('index_inn_okveds',
@@ -144,11 +153,14 @@ class okveds_mixin:
 
 class okveds(okveds_mixin, Base):
     __tablename__ = 'okveds'
+    DB_indexes = [Base_index(index_name=f'inn_index_okveds', column_index='inn', index_type='btree'), ]
 
 
-class okveds_shadow(okveds_mixin, Base):
+class okveds_shadow(okveds_mixin, Base, Base_shadow_table):
     __tablename__ = 'okveds_shadow'
-    __nonshadow_table__ = okveds
+    non_shadow_table = okveds
+    DB_indexes = [Base_index(index_name=f'inn_index_okveds_shadow', column_index='inn', index_type='btree'), ]
+
 
 
 class relevant_okveds_mixin:
@@ -169,9 +181,9 @@ class relevant_okveds(relevant_okveds_mixin, Base):
     __tablename__ = 'relevant_okveds'
 
 
-class relevant_okveds_shadow(relevant_okveds_mixin, Base):
+class relevant_okveds_shadow(relevant_okveds_mixin, Base, Base_shadow_table):
     __tablename__ = 'relevant_okveds_shadow'
-    __nonshadow_table__ = relevant_okveds
+    non_shadow_table = relevant_okveds
 
 
 
@@ -186,16 +198,18 @@ class licenses_mixin:
     date_start: Mapped[datetime | None]
     date_end: Mapped[datetime | None]
 
-    _indexes = [Base_index(index_name='inn_index', column_index='inn', index_type='hash')]
+    # _indexes = [Base_index(index_name='inn_index', column_index='inn', index_type='hash')]
 
 
 class licenses(licenses_mixin, Base):
     __tablename__ = 'licenses'
+    DB_indexes = [Base_index(index_name=f'inn_index_licenses', column_index='inn', index_type='btree'), ]
 
 
-class licenses_shadow(licenses_mixin, Base):
+class licenses_shadow(licenses_mixin, Base, Base_shadow_table):
     __tablename__ = 'licenses_shadow'
-    __nonshadow_table__ = licenses
+    non_shadow_table = licenses
+    DB_indexes = [Base_index(index_name=f'inn_index_licenses_shadow', column_index='inn', index_type='btree'), ]
 
 
 

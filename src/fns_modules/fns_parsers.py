@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from collections.abc import Callable
 
 from src.models.other_models import *
 from src.models.database_models import *
 from src.fns_modules.fns_misc import *
+from src.errors.database_errors import TableNotFound
 
 
 
@@ -25,14 +26,15 @@ class Init_ogrn_inn_mixin:
 
 
 class Tag_parser_Base(ABC):
-    _database_model: type[DeclarativeBase]
+    _database_model: type[Base_shadow_table, Base]
     def handle(self,
-               elements: etree._Element, ) -> dict[str, str | list[Any]] | None:
+               elements: etree._Element, ) -> Parser_output:
         output = []
         tablename = self._tablename
+
         if tablename is None:
-            print('tablename is not found.')
-            return None
+            raise TableNotFound(self._database_model)
+
         for element in elements:
             if element.tag == 'Документ':
                 self.org_info = self._org_info
@@ -46,21 +48,22 @@ class Tag_parser_Base(ABC):
                 self._parse_recursive(element=element)
                 element.clear()
                 output.append(self.org_info)
-        output = {'tablename': tablename, 'data': output}
+        output = Parser_output(tablename=tablename, data=output)
+        # output = {'tablename': tablename, 'data': output}
         return output
-        ...
+
 
     @property
     # @abstractmethod
     def _org_info(self, ) -> dict | list | None:
         return create_dict_from_database_model(self._database_model)
-        ...
+
 
     @property
     # @abstractmethod
     def _tablename(self, ) -> str | None:
         return get_tablename_from_database_model(self._database_model)
-        ...
+
 
     @abstractmethod
     def _parse_recursive(self,
@@ -345,7 +348,7 @@ class Parser_Base(ABC):
         return self._parse(file_dir=file_dir,
                            left=left,
                            right=right)
-        ...
+
 
 
     def _parse(self,
@@ -372,7 +375,7 @@ class Parser_Base(ABC):
 
 
     def _parse_xml(self,
-                   file_data: etree._Element, ) ->  dict[str, str | list[Any]] | None:
+                   file_data: etree._Element, ) ->  Parser_output:
         output = self.tag_parser.handle(elements=file_data)
         file_data.clear()
         return output
@@ -386,7 +389,7 @@ class Parser_Base(ABC):
         #     except:
         #         raise NoFileToDelete(file_dir=file_dir)
         # return output
-        ...
+
 
 
 

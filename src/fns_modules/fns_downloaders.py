@@ -6,10 +6,10 @@ from bs4 import BeautifulSoup
 import re
 import warnings
 
-from src.fns_modules.fns_errors import DownloadError
+from src.errors.downloader_errors import DownloadError
 
 
-class Downloader:
+class Downloader_Base:
     download_dir: Path = Path(fr'{os.getcwd()}\downloaded_dir')
     _page_url = None
 
@@ -149,17 +149,19 @@ class Downloader:
 
 
 
-class Downloader_RSMP(Downloader):
+class Downloader_RSMP(Downloader_Base):
     def __init__(self, ):
         self._page_url = 'https://www.nalog.gov.ru/opendata/7707329152-rsmp/'
         super().__init__()
 
-class Downloader_SNR(Downloader):
+class Downloader_SNR(Downloader_Base):
     def __init__(self, ):
         self._page_url = 'https://www.nalog.gov.ru/opendata/7707329152-snr/'
         super().__init__()
 
-class Downloader_SNRIP(Downloader):
+class Downloader_SNRIP(Downloader_Base):
     def __init__(self, ):
         self._page_url = 'https://www.nalog.gov.ru/opendata/7707329152-snrip/'
         super().__init__()
+
+__all__ = ['Downloader_RSMP', 'Downloader_SNRIP', 'Downloader_SNR', 'Downloader_Base']

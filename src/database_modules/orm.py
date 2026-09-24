@@ -6,7 +6,8 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio.session import async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
-from src.database_modules.database_sessions import async_session, sync_session, batch_data
+from src.database_modules.database_sessions import async_session, sync_session
+from src.database_modules.database_misc import batch_data
 from src.models.database_models import Base, fns_main_info, okveds, models_dict
 
 
@@ -111,7 +112,7 @@ async def select_additional_okveds_by_ogrn_async(ogrn: int,
 #         connection.commit()
 
 
-def create_tables_from_models(tables_models: list[type[DeclarativeBase]],
+def create_tables_from_models(tables_models: list[type[Base, ]],
                              session: sessionmaker = sync_session, ):
     tables_models = [table_model.__table__ for table_model in tables_models]
     with session().connection() as connection:
@@ -120,7 +121,7 @@ def create_tables_from_models(tables_models: list[type[DeclarativeBase]],
     # print('created')
     ...
 
-def drop_tables_from_models(tables_models: list[type[DeclarativeBase]],
+def drop_tables_from_models(tables_models: list[type[Base, ]],
                             session: sessionmaker = sync_session, ):
     tables_models = [table_model.__table__ for table_model in tables_models]
     with session().connection() as connection:
