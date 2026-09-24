@@ -315,6 +315,7 @@ class Tag_parser_SNO_IP(Tag_parser_Base):
 
         elif element.tag == 'СведНП':
             self.org_info['inn'] = int(element.get('ИННФЛ'))
+            self.org_info['ogrn'] = int(element.get('ОГРНИП'))
         elif element.tag == 'СведСНР':
             if element.get('ПризнСНР') == '1':
                 self.org_info['usn'] = True

@@ -199,9 +199,13 @@ class Base_FNS_data_updater(ABC):
     def update_data(self,
                     file_dir: Path | str,
                     delete_file_after_update: bool = True,
+                    reset_table: bool = True,
                     rewrite_table: bool = False, ) -> None:
         """
         Запуск апдейта данных.
+
+        :param reset_table:                     bool.
+                                                    Если True, то shadow таблица создается заново перед парсингом.
 
         :param rewrite_table:                   bool.
                                                     Если True, то таблица, в которую записываются данные, перезапишет
@@ -225,7 +229,7 @@ class Base_FNS_data_updater(ABC):
         # if file_dir is None:
         #     return
 
-        self._initialize_table()
+        if reset_table: self._reset_table()
 
         xml_files_num = _xml_files_num(zip_file_dir=file_dir)
         self._create_processes(xml_files_num=xml_files_num,
@@ -283,7 +287,7 @@ class Base_FNS_data_updater(ABC):
             process.join()
         ...
 
-    def _initialize_table(self, ):
+    def _reset_table(self, ):
         drop_tables_from_models(tables_models=[self._parser.tag_parser._database_model])
         create_tables_from_models(tables_models=[self._parser.tag_parser._database_model,
                                                  self._parser.tag_parser._database_model.non_shadow_table])

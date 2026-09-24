@@ -106,6 +106,8 @@ class sno_mixin:
                                     autoincrement=True, )
     inn: Mapped[int] = mapped_column(BigInteger,
                                      nullable=False, )
+    ogrn: Mapped[int] = mapped_column(BigInteger,
+                                      nullable=True)
     eshn: Mapped[bool]
     usn: Mapped[bool]
     ausn: Mapped[bool]
