@@ -107,9 +107,12 @@ class Tag_parser_OGRN_MAIN_INFO(Tag_parser_Base):
                 self._parse_recursive(element=child_element)
 
         elif element.tag == 'ФИОИП':
-            self.org_info['full_name'] = (str(element.get('Фамилия')) + ' '
-                                       + str(element.get('Имя')) + ' '
-                                       + str(element.get('Отчество')).strip())
+            first_name = str(element.get('Фамилия'))
+            surname = str(element.get('Имя'))
+            patronymic = str(element.get('Отчество'))
+            self.org_info['full_name'] = ((first_name if first_name else '') + ' '
+                                          + (surname if surname else '') + ' '
+                                          + (patronymic if patronymic else '') + ' ').strip()
 
         elif element.tag == 'СведМН':
             self.org_info['region_code'] = element.get('КодРегион')
