@@ -1,5 +1,5 @@
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import inspect, BigInteger
+from sqlalchemy import inspect, BigInteger, VARCHAR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from typing import TypedDict
@@ -60,8 +60,8 @@ class fns_main_info_mixin:
     id: Mapped[int] = mapped_column(BigInteger,
                                     primary_key=True,
                                     autoincrement=True)
-    inn: Mapped[int] = mapped_column(BigInteger, )
-    ogrn: Mapped[int] = mapped_column(BigInteger, )
+    inn: Mapped[str] = mapped_column(VARCHAR(12))
+    ogrn: Mapped[str] = mapped_column(VARCHAR(15))
     main_okved_name: Mapped[str] = mapped_column(nullable=True)
     main_okved_code: Mapped[str] = mapped_column(nullable=True)
     full_name: Mapped[str] = mapped_column(nullable=True)
@@ -104,9 +104,9 @@ class sno_mixin:
     id: Mapped[int] = mapped_column(BigInteger,
                                     primary_key=True,
                                     autoincrement=True, )
-    inn: Mapped[int] = mapped_column(BigInteger,
-                                     nullable=False, )
-    ogrn: Mapped[int] = mapped_column(BigInteger,
+    inn: Mapped[str] = mapped_column(VARCHAR(12),
+                                     nullable=False)
+    ogrn: Mapped[str] = mapped_column(VARCHAR(15),
                                       nullable=True)
     eshn: Mapped[bool]
     usn: Mapped[bool]
@@ -134,9 +134,9 @@ class okveds_mixin:
     id: Mapped[int] = mapped_column(BigInteger,
                                     primary_key=True,
                                     autoincrement=True, )
-    inn: Mapped[int] = mapped_column(BigInteger,
+    inn: Mapped[str] = mapped_column(VARCHAR(12),
                                      nullable=False, )
-    ogrn: Mapped[int] = mapped_column(BigInteger,
+    ogrn: Mapped[str] = mapped_column(VARCHAR(15),
                                       nullable=False, )
     # name: Mapped[str]
     code: Mapped[str]
@@ -193,8 +193,8 @@ class licenses_mixin:
     id: Mapped[int] = mapped_column(BigInteger,
                                primary_key=True,
                                autoincrement=True)
-    inn: Mapped[int] = mapped_column(BigInteger)
-    ogrn: Mapped[int] = mapped_column(BigInteger)
+    inn: Mapped[str] = mapped_column(VARCHAR(12))
+    ogrn: Mapped[str] = mapped_column(VARCHAR(15))
     num: Mapped[str]
     date: Mapped[datetime | None]
     date_start: Mapped[datetime | None]

@@ -16,10 +16,10 @@ class Init_ogrn_inn_mixin:
                 if self.ogrn and self.inn:
                     return True
         elif element.tag == 'ИПВклМСП':
-            self.inn, self.ogrn = int(element.get('ИННФЛ')), int(element.get('ОГРНИП'))
+            self.inn, self.ogrn = str(element.get('ИННФЛ')), str(element.get('ОГРНИП'))
             return True
         elif element.tag == 'ОргВклМСП':
-            self.inn, self.ogrn = int(element.get('ИННЮЛ')), int(element.get('ОГРН'))
+            self.inn, self.ogrn = str(element.get('ИННЮЛ')), str(element.get('ОГРН'))
             return True
         return False
 
@@ -101,8 +101,8 @@ class Tag_parser_OGRN_MAIN_INFO(Tag_parser_Base):
                 self._parse_recursive(element=child_element)
 
         elif element.tag == 'ИПВклМСП':
-            self.org_info['inn'] = int(element.get('ИННФЛ'))
-            self.org_info['ogrn'] = int(element.get('ОГРНИП'))
+            self.org_info['inn'] = str(element.get('ИННФЛ'))
+            self.org_info['ogrn'] = str(element.get('ОГРНИП'))
             for child_element in element:
                 self._parse_recursive(element=child_element)
 
@@ -139,8 +139,8 @@ class Tag_parser_OGRN_MAIN_INFO(Tag_parser_Base):
         elif element.tag == 'ОргВклМСП':
             self.org_info['full_name'] = element.get('НаимОрг')
             self.org_info['short_name'] = element.get('НаимОргСокр')
-            self.org_info['inn'] = int(element.get('ИННЮЛ'))
-            self.org_info['ogrn'] = int(element.get('ОГРН'))
+            self.org_info['inn'] = str(element.get('ИННЮЛ'))
+            self.org_info['ogrn'] = str(element.get('ОГРН'))
 
         # # Добавить позже
         # elif element.tag == 'СвЛиценз':
@@ -284,7 +284,7 @@ class Tag_parser_SNO_UL(Tag_parser_Base):
             # element.clear()
 
         if element.tag == 'СведНП':
-            self.org_info['inn'] = int(element.get('ИННЮЛ'))
+            self.org_info['inn'] = str(element.get('ИННЮЛ'))
         elif element.tag == 'СведСНР':
             self.org_info['eshn'] = True if element.get('ПризнЕСХН') == '1' else False
 
@@ -317,8 +317,8 @@ class Tag_parser_SNO_IP(Tag_parser_Base):
                 self._parse_recursive(element=item)
 
         elif element.tag == 'СведНП':
-            self.org_info['inn'] = int(element.get('ИННФЛ'))
-            self.org_info['ogrn'] = int(element.get('ОГРНИП'))
+            self.org_info['inn'] = str(element.get('ИННФЛ'))
+            self.org_info['ogrn'] = str(element.get('ОГРНИП'))
         elif element.tag == 'СведСНР':
             if element.get('ПризнСНР') == '1':
                 self.org_info['usn'] = True
