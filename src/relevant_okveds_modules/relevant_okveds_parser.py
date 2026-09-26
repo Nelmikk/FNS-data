@@ -29,9 +29,9 @@ class Parser_relevant_okveds:
                 letter, code, name = row
                 if not code.split():
                     continue
-                output['data'].append({'letter': row[0].strip(),
-                                       'code': row[1].strip(),
-                                       'name': row[2].strip()})
+                output['data'].append({'letter': row[0].rstrip(),
+                                       'code': row[1].rstrip(),
+                                       'name': row[2].rstrip()})
 
         except:
             print('Error while getting relevant okveds.')

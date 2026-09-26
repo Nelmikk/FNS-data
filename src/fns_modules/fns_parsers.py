@@ -110,9 +110,9 @@ class Tag_parser_OGRN_MAIN_INFO(Tag_parser_Base):
             first_name = str(element.get('Фамилия'))
             surname = str(element.get('Имя'))
             patronymic = str(element.get('Отчество'))
-            self.org_info['full_name'] = ((first_name if first_name else '') + ' '
-                                          + (surname if surname else '') + ' '
-                                          + (patronymic if patronymic else '') + ' ').strip()
+            self.org_info['full_name'] = ((first_name if first_name is not None and first_name != 'None' else '') + ' '
+                                          + (surname if surname is not None and surname != 'None' else '') + ' '
+                                          + (patronymic if patronymic is not None and patronymic != 'None' else '') + ' ').strip()
 
         elif element.tag == 'СведМН':
             self.org_info['region_code'] = element.get('КодРегион')
