@@ -1,8 +1,12 @@
-from src.database_modules.database_sessions import async_engine, sync_engine
-from src.database_modules.database_misc import batch_data
-from src.models.database_models import models_dict, Base
+from typing import Generator, Any, AsyncGenerator
 
-from sqlalchemy import insert, inspect, text
+
+from src.database_modules.database_sessions import (async_engine, sync_engine,
+                                                    async_engine_select_user, )
+from src.database_modules.database_misc import batch_data, fetch_result, divide_output, SELECT_QUERY
+from src.models.database_models import models_dict, Base, fns_main_info, okveds, sno, licenses, relevant_okveds
+
+from sqlalchemy import insert, inspect, text, Row, TextClause
 from sqlalchemy.ext.asyncio.engine import AsyncEngine
 from sqlalchemy.engine.base import Engine
 
@@ -26,26 +30,156 @@ def insert_data(tablename: str,
         query = insert(models_dict[tablename].__table__)
         connection.execute(query, values)
         connection.commit()
-    ...
 
-# async def rename_tables_async(engine: AsyncEngine | None,
-#                               *args, ):
-#     """
-#     Обновляет название таблиц в одной транзакции.
-#
-#     :param engine:
-#     :param args:        tuple(old_tablename: str, new_tablename: str).
-#     :return:
-#     """
-#     engine = engine if engine else async_engine
-#     async with engine.connect() as connection:
-#         for old_name, new_name in args:
-#             if old_name not in [i.__tablename__ for i in Base.__subclasses__()]:
-#                 continue
-#
-#             query = text(f"ALTER TABLE {old_name} RENAME TO {new_name};")
-#             await connection.execute(query)
-#         await connection.commit()
+
+def __select_fns_main_info_query(search_type: str,
+                                 value: str, ) -> SELECT_QUERY:
+    if search_type not in ['ogrn', 'inn']:
+        raise ValueError(f'search_type parameter expected "ogrn" or "inn" but got "{search_type}".')
+    query = text(f'SELECT * '
+                 f'FROM {fns_main_info.__tablename__} '
+                 f'WHERE {search_type} = :{search_type};')
+    parameters = {search_type: value}
+    return SELECT_QUERY(statement=query, parameters=parameters)
+
+
+def __select_additional_ovkeds_query(search_type: str,
+                                     value: str, ) ->  SELECT_QUERY:
+    if search_type not in ['ogrn', 'inn']:
+        raise ValueError(f'search_type parameter expected "ogrn" or "inn" but got "{search_type}".')
+    query = text(f'SELECT inn, ogrn, {okveds.__tablename__}.code, '
+                        f'relevant_okveds.name, {relevant_okveds.__tablename__}.letter '
+                        f'FROM {okveds.__tablename__} '
+                        f'LEFT JOIN {relevant_okveds.__tablename__} '
+                        f'ON {okveds.__tablename__}.code = {relevant_okveds.__tablename__}.code '
+                        f'WHERE {search_type} = :{search_type};')
+    parameters = {search_type: value}
+    return SELECT_QUERY(statement=query, parameters=parameters)
+
+
+def __select_licenses_query(search_type: str,
+                            value: str, ) ->  SELECT_QUERY:
+    if search_type not in ['ogrn', 'inn']:
+        raise ValueError(f'search_type parameter expected "ogrn" or "inn" but got "{search_type}".')
+    query = text(f'SELECT * '
+                 f'FROM {licenses.__tablename__} '
+                 f'WHERE {search_type} = :{search_type};')
+    parameters = {search_type: value}
+    return SELECT_QUERY(statement=query, parameters=parameters)
+
+
+def __select_sno_ip_query(search_type: str,
+                                     value: str, ) ->  SELECT_QUERY:
+    if search_type not in ['ogrn', 'inn']:
+        raise ValueError(f'search_type parameter expected "ogrn" or "inn" but got "{search_type}".')
+    query = text(f'SELECT * '
+                        f'FROM {sno.__tablename__} '
+                        f'WHERE {search_type} = :{search_type};')
+    parameters = {search_type: value}
+    return SELECT_QUERY(statement=query, parameters=parameters)
+
+
+def __select_sno_ul_query(search_type: str,
+                          value: str, ) ->  SELECT_QUERY:
+    query = text(f'SELECT {fns_main_info.__tablename__}.inn, {fns_main_info.__tablename__}.ogrn, '
+                 f'{sno.__tablename__}.eshn, {sno.__tablename__}.usn, {sno.__tablename__}.ausn, '
+                 f'{sno.__tablename__}.srp, {sno.__tablename__}.psn, {sno.__tablename__}.npd '
+                 f'FROM {fns_main_info.__tablename__} '
+                 f'INNER JOIN {sno.__tablename__} ON {sno.__tablename__}.inn = {fns_main_info.__tablename__}.inn '
+                 f'WHERE {fns_main_info.__tablename__}.{search_type} = :{search_type};')
+    parameters = {search_type: value}
+    return SELECT_QUERY(statement=query, parameters=parameters)
+
+
+async def select_fns_main_info_by_inn_async(inn: str,
+                                            engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+
+    async with engine.connect() as connection:
+        results = await connection.execute(**__select_fns_main_info_query(search_type='inn', value=inn))
+
+    return fetch_result(results)
+
+
+
+async def select_fns_main_info_by_ogrn_async(ogrn: str,
+                                             engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+
+    async with engine.connect() as connection:
+        results = await connection.execute(**__select_fns_main_info_query(search_type='ogrn', value=ogrn))
+
+    return fetch_result(results)
+
+
+
+async def select_additional_okveds_by_inn_async(inn: str,
+                                                engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+
+    async with engine.connect() as connection:
+        results = await connection.execute(**__select_additional_ovkeds_query(search_type='inn', value=inn))
+
+    return divide_output(results)
+
+
+
+async def select_additional_okveds_by_ogrn_async(ogrn: str,
+                                                 engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+
+    async with engine.connect() as connection:
+        results = await connection.execute(**__select_additional_ovkeds_query(search_type='ogrn', value=ogrn))
+
+    return divide_output(results)
+
+
+async def select_licenses_by_inn_async(inn: str,
+                                       engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+    async with engine.connect() as connection:
+        results = await connection.execute(**__select_licenses_query(search_type='inn', value=inn))
+
+    return divide_output(results)
+
+
+async def select_licenses_by_ogrn_async(ogrn: str,
+                                        engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+    async with engine.connect() as connection:
+        results = await connection.execute(**__select_licenses_query(search_type='ogrn', value=ogrn))
+
+    return divide_output(results)
+
+
+async def select_sno_ip_by_inn_async(inn: str,
+                                     engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+
+    async with engine.connect() as connection:
+        results = await connection.execute(**__select_sno_ip_query(search_type='inn', value=inn))
+
+    return fetch_result(results)
+
+
+async def select_sno_ip_by_ogrn_async(ogrn: str,
+                                      engine: AsyncEngine = async_engine_select_user) -> AsyncGenerator:
+
+    async with engine.connect() as connection:
+        results = await connection.execute(**__select_sno_ip_query(search_type='ogrn', value=ogrn))
+
+    return fetch_result(results)
+
+
+async def select_sno_ul_by_inn_async(inn: str,
+                                     engine: AsyncEngine = async_engine_select_user, ):
+
+    async with engine.connect() as connection:
+        results = await connection.execute(**__select_sno_ul_query(search_type='inn', value=inn))
+
+    return fetch_result(results)
+
+
+async def select_sno_ul_by_ogrn_async(ogrn: str,
+                                      engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+    async with engine.connect() as connection:
+        results = await connection.execute(**__select_sno_ul_query(search_type='ogrn', value=ogrn))
+
+    return fetch_result(results)
+
 
 
 async def replace_tables_async(old_table_name: str,
