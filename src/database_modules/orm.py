@@ -121,9 +121,10 @@ def create_tables_from_models(tables_models: list[type[Base, ]],
     # print('created')
     ...
 
-def drop_tables_from_models(tables_models: list[type[Base, ]],
+def drop_tables_from_models(tables_models: list[type[Base, ]] | None = None,
                             session: sessionmaker = sync_session, ):
-    tables_models = [table_model.__table__ for table_model in tables_models]
+    if tables_models is not None:
+        tables_models = [table_model.__table__ for table_model in tables_models]
     with session().connection() as connection:
         Base.metadata.drop_all(bind=connection, tables=tables_models)
         connection.commit()

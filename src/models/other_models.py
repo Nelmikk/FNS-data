@@ -2,48 +2,55 @@ from src.models.database_models import Base
 from typing import TypedDict, Any
 
 
-class FNS_DATA:
-    ...
-
-
-def create_dict_from_database_model(database_model: type[Base], ) -> dict | None:
-    """
-    Конуструктор словарей для хранения данных при парсинге.
-    Словарь генерируется из столбцов БД модели.
-    Если модель не объявлена, возвращает None.
-
-        Возвращает словарь вида:
-                {
-                    col1_name: val1,
-                    col2_name: val2,
-                    ...
-                }
-
-        Юзается след образом:
-            var = create_dict_from_database_model(_database_model: type[Base] = database_model_class)
-
-    :param database_model:
-    :return dict | None:
-    """
-    try: return {k.name: False if k.type.python_type is bool else None
-                 for k in database_model.__table__.columns if k.name != 'id'}
-    except: return None
-
-
-def get_tablename_from_database_model(database_model: type[Base], ) -> str | None:
-    """
-    Возвращает название таблицы в БД из модели БД, созданной в /src/models/database_models.py.
-    Если модель не объявлена, возвращает None.
-
-        Юзается след образом:
-            table_name = get_tablename_from_database_model(_database_model: type[Base] = database_model_class)
-
-    :param database_model:
-    :return str | None:
-    """
-    try: return database_model.__tablename__
-    except: return None
-    ...
+# class FNS_DATA:
+#     ...
+#
+#
+# base_values = {
+#     list: list(),
+#     dict: list(),
+#     bool: False,
+# }
+#
+#
+# def create_dict_from_database_model(database_model: type[Base], ) -> dict | None:
+#     """
+#     Конуструктор словарей для хранения данных при парсинге.
+#     Словарь генерируется из столбцов БД модели.
+#     Если модель не объявлена, возвращает None.
+#
+#         Возвращает словарь вида:
+#                 {
+#                     col1_name: val1,
+#                     col2_name: val2,
+#                     ...
+#                 }
+#
+#         Юзается след образом:
+#             var = create_dict_from_database_model(_database_model: type[Base] = database_model_class)
+#
+#     :param database_model:
+#     :return dict | None:
+#     """
+#     try: return {k.name: base_values[k.type.python_type] if k.type.python_type in base_values.keys() else None
+#                  for k in database_model.__table__.columns if k.name != 'id'}
+#     except: return None
+#
+#
+# def get_tablename_from_database_model(database_model: type[Base], ) -> str | None:
+#     """
+#     Возвращает название таблицы в БД из модели БД, созданной в /src/models/database_models.py.
+#     Если модель не объявлена, возвращает None.
+#
+#         Юзается след образом:
+#             table_name = get_tablename_from_database_model(_database_model: type[Base] = database_model_class)
+#
+#     :param database_model:
+#     :return str | None:
+#     """
+#     try: return database_model.__tablename__
+#     except: return None
+#     ...
 
 
 

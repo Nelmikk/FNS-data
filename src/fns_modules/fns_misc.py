@@ -4,33 +4,8 @@ from zipfile import ZipFile
 from lxml import etree
 
 
-# def check_file(expected_extension: str | list[str], ) -> Callable:
-#     """
-#     Проверка файла и пути к файлу.
-#     :param expected_extension:
-#     :return:
-#     """
-#     expected_extension = [expected_extension] if isinstance(expected_extension, str) else expected_extension
-#     def checker(func: Callable, ):
-#         @wraps(func)
-#         def wrapper(
-#                 *args, **kwargs, ):
-#             file_dir = kwargs['file_dir'] if 'file_dir' in kwargs else args[1]
-#             nonlocal expected_extension
-#             if expected_extension:
-#                 # if not str(file_dir).endswith(expected_extension): raise WrongFileExtension(file_dir, expected_extension)
-#                 if not any([str(file_dir).endswith(i) for i in expected_extension]): raise WrongFileExtension
-#             if not Path(file_dir).exists(): raise DirectoryDoesNotExist(file_dir)
-#             return func(*args, **kwargs)
-#
-#         return wrapper
-#     return checker
-
-
-
 
 class Unzipper:
-    # @check_file(expected_extension='.zip')
     def unzip_file(self,
                    file_dir: str | Path,
                    unzip_dir: str | Path | None = Path.cwd(),
@@ -52,7 +27,6 @@ class Unzipper:
                 yield Path(f'{unzip_dir}/{file}')
 
 
-    # @check_file(expected_extension=['.zip', '.xml'])
     def unzip_data(self,
                    file_dir: str | Path,
                    left: int = 0,
@@ -82,9 +56,7 @@ class Unzipper:
 
 
 class File_reader:
-    # @check_file(expected_extension='.xml')
     def get_file_root(self,
                       file_dir: str | Path, ) -> etree._Element:
         root = etree.parse(file_dir).getroot()
         return root
-        ...

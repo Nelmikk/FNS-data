@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from copy import deepcopy
 
 from src.models.other_models import *
 from src.models.database_models import *
@@ -26,7 +27,8 @@ class Init_ogrn_inn_mixin:
 
 
 class Tag_parser_Base(ABC):
-    _database_model: type[Base_shadow_table, Base]
+    _database_model: type[Base_shadow_table, Base, Base_mixin]
+    _pass_on_empty_data: bool = False
     def handle(self,
                elements: etree._Element, ) -> Parser_output:
         output = []
@@ -38,8 +40,6 @@ class Tag_parser_Base(ABC):
         for element in elements:
             if element.tag == 'Документ':
                 self.org_info = self._org_info
-
-                if self.org_info is None: continue
 
                 if self.org_info is None:
                     print('Database model is not found.')
@@ -55,14 +55,14 @@ class Tag_parser_Base(ABC):
 
     @property
     # @abstractmethod
-    def _org_info(self, ) -> dict | list | None:
-        return create_dict_from_database_model(self._database_model)
+    def _org_info(self, ) -> dict:
+        return deepcopy(self._database_model.base_column_values)
 
 
     @property
     # @abstractmethod
     def _tablename(self, ) -> str | None:
-        return get_tablename_from_database_model(self._database_model)
+        return self._database_model.__tablename__
 
 
     @abstractmethod
@@ -75,21 +75,7 @@ class Tag_parser_Base(ABC):
 
 class Tag_parser_OGRN_MAIN_INFO(Tag_parser_Base):
     _database_model = fns_main_info_shadow
-    # def __init__(self):
-    #     self._database_model = fns_main_info_shadow
 
-    # @property
-    # def _org_info(self, ) -> dict | None:
-    #     # return dict_from_database_model_name['fns_main_info_shadow']
-    #     return create_dict_from_database_model(fns_main_info_shadow)
-    #     ...
-
-    # @property
-    # def _tablename(self, ) -> str | None:
-    #     # return tablename_from_database_model_name['fns_main_info_shadow']
-    #     return get_tablename_from_database_model(fns_main_info_shadow)
-    #     ...
-    #
     def _parse_recursive(self,
                          element: etree._Element, ) -> None:
         if element.tag == 'Документ':
@@ -142,138 +128,142 @@ class Tag_parser_OGRN_MAIN_INFO(Tag_parser_Base):
             self.org_info['inn'] = str(element.get('ИННЮЛ'))
             self.org_info['ogrn'] = str(element.get('ОГРН'))
 
-        # # Добавить позже
-        # elif element.tag == 'СвЛиценз':
-        #     pass
 
 
 class Tag_parser_ADDITIONAL_OKVEDS(Tag_parser_Base, Init_ogrn_inn_mixin):
     _database_model = okveds_shadow
-    # def __init__(self):
-    #     self._database_model = okveds_shadow
 
     def handle(self,
-               elements: etree._Element, ) -> dict[str, str | list[Any]] | None:
+               elements: etree._Element, ) -> Parser_output:
         output = []
         tablename = self._tablename
 
-        if not tablename: return None
-        self.inn, self.ogrn = (None, None)
+        if tablename is None:
+            raise TableNotFound(self._database_model)
+
         for element in elements:
-            if self.initialize(element=element):
+            if element.tag == 'Документ':
                 self.org_info = self._org_info
+                # print(len(self.org_info['additional_okveds_data']))
+
+                if self.org_info is None:
+                    print('Database model is not found.')
+                    continue
+
                 self._parse_recursive(element=element)
-                output += self.org_info
-            element.clear()
-        output = {'tablename': tablename, 'data': output}
+                element.clear()
+
+                if not self.org_info['additional_okveds_data']: continue
+
+                output.append(self.org_info)
+        output = Parser_output(tablename=tablename, data=output)
         return output
-
-    @property
-    def _org_info(self, ) -> dict | list:
-        return []
-
-#     @property
-#     def _tablename(self, ) -> str | None:
-#         # return get_tablename_from_database_model(okveds_shadow)
-#         return get_tablename_from_database_model(okveds_shadow)
-
-    # def _initialize_inn_ogrn(self,
-    #                          element, ) -> bool:
-    #     """
-    #     Инициилизирует self.inn, self.ogrn.
-    #     :param element:
-    #     :return:
-    #     """
-    #     if element.tag == 'Документ':
-    #         for child_element in element:
-    #             self._initialize_inn_ogrn(element=child_element)
-    #             if self.ogrn and self.inn:
-    #                 return True
-    #     elif element.tag == 'ИПВклМСП':
-    #         self.inn, self.ogrn = int(element.get('ИННФЛ')), int(element.get('ОГРНИП'))
-    #         return True
-    #     elif element.tag == 'ОргВклМСП':
-    #         self.inn, self.ogrn = int(element.get('ИННЮЛ')), int(element.get('ОГРН'))
-    #         return True
-    #     return False
-    #     ...
 
 
     def _parse_recursive(self,
                          element: etree._Element, ):
         if element.tag == 'Документ':
+
             for child_element in element:
                 self._parse_recursive(element=child_element)
-            # element.clear()
+
+        elif element.tag == 'ИПВклМСП':
+            self.org_info['inn'] = str(element.get('ИННФЛ'))
+            self.org_info['ogrn'] = str(element.get('ОГРНИП'))
+
+        elif element.tag == 'ОргВклМСП':
+            self.org_info['inn'] = str(element.get('ИННЮЛ'))
+            self.org_info['ogrn'] = str(element.get('ОГРН'))
+
         elif element.tag == 'СвОКВЭД':
             for child_element in element:
                 self._parse_recursive(element=child_element)
         elif element.tag == 'СвОКВЭДДоп':
-            additional_okveds = create_dict_from_database_model(self._database_model)
-            additional_okveds['inn'] = self.inn
-            additional_okveds['ogrn'] = self.ogrn
-            # additional_okveds['name'] = element.get('НаимОКВЭД')
-            additional_okveds['code'] = element.get('КодОКВЭД')
-            self.org_info.append(additional_okveds)
+            self.org_info['additional_okveds_data'].append({'name': element.get('НаимОКВЭД'),
+                                                            'code': element.get('КодОКВЭД')})
 
 
 
 class Tag_parser_LICENSES(Tag_parser_Base, Init_ogrn_inn_mixin):
     _database_model = licenses_shadow
-    # def __init__(self, ):
-    #     self._database_model = licenses_shadow
 
     def handle(self,
-               elements: etree._Element, ) -> dict[str, str | list[Any]] | None:
+               elements: etree._Element, ) -> Parser_output:
         output = []
         tablename = self._tablename
 
-        if not tablename: return None
-        self.inn, self.ogrn = (None, None)
+        if tablename is None:
+            raise TableNotFound(self._database_model)
+
         for element in elements:
-            if self.initialize(element=element):
+            if element.tag == 'Документ':
                 self.org_info = self._org_info
+
+                if self.org_info is None:
+                    print('Database model is not found.')
+                    continue
+
                 self._parse_recursive(element=element)
-                output += self.org_info
-            element.clear()
-        output = {'tablename': tablename, 'data': output}
+                element.clear()
+
+                if not self.org_info['licenses_data']: continue
+
+                output.append(self.org_info)
+        output = Parser_output(tablename=tablename, data=output)
         return output
-
-
-    @property
-    def _org_info(self, ) -> dict | list | None:
-        return []
 
 
     def _parse_recursive(self,
                          element: etree._Element, ):
         if element.tag == 'Документ':
+
             for item in element:
                 self._parse_recursive(element=item)
+
+        elif element.tag == 'ИПВклМСП':
+            self.org_info['inn'] = str(element.get('ИННФЛ'))
+            self.org_info['ogrn'] = str(element.get('ОГРНИП'))
+
+        elif element.tag == 'ОргВклМСП':
+            self.org_info['inn'] = str(element.get('ИННЮЛ'))
+            self.org_info['ogrn'] = str(element.get('ОГРН'))
+
         elif element.tag == 'СвЛиценз':
-            licenses = create_dict_from_database_model(self._database_model)
-            licenses['inn'] = self.inn
-            licenses['ogrn'] = self.ogrn
-            licenses['num'] = element.get('НомЛиценз')
-            licenses['date'] = datetime.strptime(element.get('ДатаЛиценз'), '%d.%m.%Y').date() if element.get('ДатаЛиценз') else None
-            licenses['date_start'] = datetime.strptime(element.get('ДатаНачЛиценз'), '%d.%m.%Y').date() if element.get('ДатаНачЛиценз') else None
-            licenses['date_end'] = datetime.strptime(element.get('ДатаКонЛиценз'), '%d.%m.%Y').date()if element.get('ДатаКонЛиценз') else None
-            licenses['issued_by'] = element.get('ОргВыдЛиценз')
-            self.org_info.append(licenses)
+            self.org_info['licenses_data'].append({
+                'date': datetime.strptime(element.get('ДатаЛиценз'), '%d.%m.%Y').date().isoformat() if element.get('ДатаЛиценз') else None,
+                'date_start': datetime.strptime(element.get('ДатаНачЛиценз'), '%d.%m.%Y').date().isoformat() if element.get('ДатаНачЛиценз') else None,
+                'date_end': datetime.strptime(element.get('ДатаКонЛиценз'), '%d.%m.%Y').date().isoformat() if element.get('ДатаКонЛиценз') else None,
+            })
 
 
 class Tag_parser_SNO_UL(Tag_parser_Base):
     _database_model = sno_shadow
-    # def __init__(self, ):
-    #     self._database_model = sno_shadow
 
-    # @property
-    # def _org_info(self, ) -> dict | list | None:
-    #     return create_dict_from_database_model(sno_shadow)
-    #
-    # @property
-    # def _tablename(self, ) -> str | None:
-    #     return get_tablename_from_database_model(sno_shadow)
+    def handle(self,
+               elements: etree._Element, ) -> Parser_output:
+        output = []
+        tablename = self._tablename
+
+        if tablename is None:
+            raise TableNotFound(self._database_model)
+
+        for element in elements:
+            if element.tag == 'Документ':
+                self.org_info = self._org_info
+
+                if self.org_info is None:
+                    print('Database model is not found.')
+                    continue
+
+                self._parse_recursive(element=element)
+                element.clear()
+
+                if not self.org_info['additional_okveds_data']: continue
+
+                output.append(self.org_info)
+        output = Parser_output(tablename=tablename, data=output)
+        # output = {'tablename': tablename, 'data': output}
+        return output
 
 
     def _parse_recursive(self,
@@ -300,14 +290,14 @@ class Tag_parser_SNO_IP(Tag_parser_Base):
     # def __init__(self, ):
     #     self._database_model = sno_shadow
 
-    @property
-    def _org_info(self, ) -> dict | list | None:
-        return create_dict_from_database_model(sno_shadow)
-
-
-    @property
-    def _tablename(self, ) -> str | None:
-        return get_tablename_from_database_model(sno_shadow)
+    # @property
+    # def _org_info(self, ) -> dict | list | None:
+    #     return create_dict_from_database_model(sno_shadow)
+    #
+    #
+    # @property
+    # def _tablename(self, ) -> str | None:
+    #     return get_tablename_from_database_model(sno_shadow)
 
 
     def _parse_recursive(self,

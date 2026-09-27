@@ -1,7 +1,5 @@
-from typing import Any
-
 from src.errors.database_errors import TableNotFound
-from src.models.other_models import get_tablename_from_database_model, Parser_output
+from src.models.other_models import Parser_output
 from src.models.database_models import relevant_okveds_shadow
 
 
@@ -16,7 +14,7 @@ class Parser_relevant_okveds:
 
         :return:
         """
-        tablename = get_tablename_from_database_model(self._database_model)
+        tablename = self._database_model.base_column_values
         if tablename is None:
             raise TableNotFound
         output = Parser_output(tablename=tablename, data=[])

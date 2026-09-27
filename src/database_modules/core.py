@@ -12,7 +12,7 @@ from sqlalchemy.engine.base import Engine
 
 
 
-@batch_data(batch_size=16_000)
+@batch_data(batch_size=14_000)
 async def insert_data_async(tablename: str,
                             values: list[dict],
                             engine: AsyncEngine = async_engine, ):
@@ -20,7 +20,6 @@ async def insert_data_async(tablename: str,
         query = insert(models_dict[tablename].__table__)
         await connection.execute(query, values)
         await connection.commit()
-    ...
 
 @batch_data(batch_size=16_000)
 def insert_data(tablename: str,
@@ -48,11 +47,11 @@ def __select_additional_ovkeds_query(search_type: str,
     if search_type not in ['ogrn', 'inn']:
         raise ValueError(f'search_type parameter expected "ogrn" or "inn" but got "{search_type}".')
     query = text(f'SELECT inn, ogrn, {okveds.__tablename__}.code, '
-                        f'relevant_okveds.name, {relevant_okveds.__tablename__}.letter '
-                        f'FROM {okveds.__tablename__} '
-                        f'LEFT JOIN {relevant_okveds.__tablename__} '
-                        f'ON {okveds.__tablename__}.code = {relevant_okveds.__tablename__}.code '
-                        f'WHERE {search_type} = :{search_type};')
+                 f'relevant_okveds.name, {relevant_okveds.__tablename__}.letter '
+                 f'FROM {okveds.__tablename__} '
+                 f'LEFT JOIN {relevant_okveds.__tablename__} '
+                 f'ON {okveds.__tablename__}.code = {relevant_okveds.__tablename__}.code '
+                 f'WHERE {search_type} = :{search_type};')
     parameters = {search_type: value}
     return SELECT_QUERY(statement=query, parameters=parameters)
 
@@ -156,7 +155,7 @@ async def select_sno_ip_by_inn_async(inn: str,
 
 
 async def select_sno_ip_by_ogrn_async(ogrn: str,
-                                      engine: AsyncEngine = async_engine_select_user) -> AsyncGenerator:
+                                      engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
 
     async with engine.connect() as connection:
         results = await connection.execute(**__select_sno_ip_query(search_type='ogrn', value=ogrn))
@@ -180,6 +179,15 @@ async def select_sno_ul_by_ogrn_async(ogrn: str,
 
     return fetch_result(results)
 
+
+async def select_full_data_ip_by_inn(inn: str,
+                                     engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+    select_main_info_query = __select_fns_main_info_query(search_type='inn', value=inn)
+    select_additional_okveds_query = __select_additional_ovkeds_query(search_type='inn', value=inn)
+    select_sno_query = __select_sno_ip_query(search_type='inn', value=inn)
+    select_licenses_query = __select_licenses_query(search_type='inn', value=inn)
+
+    ...
 
 
 async def replace_tables_async(old_table_name: str,
@@ -254,23 +262,6 @@ def rename_index(old_index_name: str,
     with engine.connect() as connection:
         connection.execute(query)
         connection.commit()
-
-# def drop_all_tables_using_metadata(engine: Engine = sync_engine, ):
-#     """
-#     Дропает все таблицы, которые есть в схеме.
-#     :return:
-#     """
-#     # metadata = MetaData()
-#     # metadata.reflect(bind=engine)
-#     # metadata.drop_all(bind=engine)
-#     database_models.Base.metadata.drop_all(bind=engine,
-#                                            tables=[i.__table__ for i in database_models.Base.__subclasses__()])
-
-
-
-# def reset_tables(engine: Engine = sync_engine,
-#                  tables=list[type[database_models.Base]], ):
-#     database_models.Base.metadata.drop_all()
 
 
 
