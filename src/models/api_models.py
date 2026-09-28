@@ -93,27 +93,3 @@ class full_data(BaseModel):
     additional_okveds_data: list[ADDITIONAL_OKVEDS_DATA] | None = []
 
     licenses_data: list[LICENSES_DATA] | None = []
-
-
-# class full_info(BaseModel):
-#     model_config = ConfigDict(from_attributes=True)
-#
-#     inn: str
-#     ogrn: str
-#     main_okved_name: str | None
-#     main_okved_code: str | None
-#     full_name: str | None
-#     short_name: str | None
-#     subject_type: str | None
-#     subject_category: str | None
-#     inclusion_date: datetime | None
-#     is_social: str | None
-#     avg_employees_num: int | None
-#     region_code: str | None
-#     region: str | None
-#     district: str | None
-#     area: str | None
-#
-#     additional_okveds: list[full_info_ovkeds] | None = []
-
-    ...

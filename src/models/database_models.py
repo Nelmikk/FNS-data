@@ -44,38 +44,6 @@ class Base_shadow_table:
     """
     non_shadow_table: type[Base]
 
-# class kadarbitr_cases(Base):
-#     __tablename__ = 'kadarbitr_cases'
-#     # id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-#     case_num: Mapped[str] = mapped_column(primary_key=True)
-#     case_link: Mapped[str]
-#     case_date: Mapped[datetime]
-#     case_type: Mapped[str]
-#     court: Mapped[str]
-#     judge: Mapped[str]
-#     case_status: Mapped[str] = mapped_column(nullable=True)
-#     last_doc_name: Mapped[str] = mapped_column(nullable=True)
-#
-#
-# class kadarbitr_plaintiffs(Base):
-#     __tablename__ = 'kadarbitr_plaintiffs'
-#     id: Mapped[int] = mapped_column(primary_key=True,
-#                                     autoincrement=True)
-#     case_num: Mapped[str]
-#     inn: Mapped[int] = mapped_column(BigInteger)
-#     name: Mapped[str]
-#     info: Mapped[str]
-#
-#
-# class kadarbitr_respondents(Base):
-#     __tablename__ = 'kadarbitr_respondents'
-#     id: Mapped[int] = mapped_column(primary_key=True,
-#                                     autoincrement=True)
-#     case_num: Mapped[str]
-#     inn: Mapped[int]
-#     name: Mapped[str]
-#     info: Mapped[str]
-
 
 class Base_mixin:
     base_column_values: dict[str, Any]

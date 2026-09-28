@@ -243,7 +243,6 @@ class Tag_parser_SNO_UL(Tag_parser_Base):
         if element.tag == 'Документ':
             for item in element:
                 self._parse_recursive(element=item)
-            # element.clear()
 
         if element.tag == 'СведНП':
             self.org_info['inn'] = str(element.get('ИННЮЛ'))
@@ -333,16 +332,6 @@ class Parser_Base(ABC):
         output = self.tag_parser.handle(elements=file_data)
         file_data.clear()
         return output
-        # try:
-        #     elements = self.reader.get_file_root(file_dir=file_dir)
-        #     output = self.tag_parser.handle(elements=elements)
-        # finally:
-        #     try:
-        #         if delete_after_parsing is True:
-        #             os.remove(file_dir)
-        #     except:
-        #         raise NoFileToDelete(file_dir=file_dir)
-        # return output
 
 
 
@@ -383,74 +372,3 @@ class Parser_SNO_IP(Parser_Base):
 #         self.tag_parser = self.tag_parser()
         super().__init__()
 
-
-
-
-
-
-if __name__ == '__main__':
-
-    def _test_parser_RSMP():
-        parser_rsmp_main_info = Parser_RSMP_MAIN_INFO()
-        output = parser_rsmp_main_info.parse(
-            file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-10082026-structure-12052026.zip', left=1,
-            right=2)
-        if output is None: print('Err')
-        else:
-            result = 0
-            for item in output:
-
-                result += len(item['data'])
-            print(result)
-
-
-    def _test_parser_okveds():
-        parser_rsmp_additional_okveds = Parser_RSMP_ADDITIONAL_OKVEDS()
-        output = parser_rsmp_additional_okveds.parse(
-            file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-10082026-structure-12052026.zip', left=1,
-            right=2)
-        if output is None: print('Err')
-        else:
-            for item in output:
-                print(len(item['data']))
-
-
-    def _test_parser_sno_ul():
-        parser_snrul = Parser_SNO_UL()
-        output = parser_snrul.parse(
-            file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-20260625-structure-20230425.zip', left=1,
-            right=3)
-        if output is None: print('Err')
-        else:
-            for item in output:
-                print(item)
-
-
-    def _test_parser_sno_ip():
-        parser_snrul = Parser_SNO_IP()
-        output = parser_snrul.parse(
-            file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-20260625-structure-20241025.zip', left=1,
-            right=3)
-        if output is None: print('Err')
-        else:
-            for item in output:
-                print(item)
-                ...
-
-    def _test_parser_licenses():
-        parser_licenses = Parser_RSMP_LICENSES()
-        output = parser_licenses.parse(
-            file_dir=r'E:\PycharmProjects\MegaParsers\src\downloaded_dir\data-10082026-structure-12052026.zip', left=1,
-            right=2)
-        if output is None: print('Err')
-        else:
-            for item in output:
-                print(item['data'])
-
-
-    # _test_parser_RSMP()
-    # _test_parser_okveds()
-    # _test_parser_licenses()
-    # _test_parser_sno_ul()
-    # _test_parser_sno_ip()
-    ...
