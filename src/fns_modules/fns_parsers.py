@@ -194,7 +194,6 @@ class Tag_parser_LICENSES(Tag_parser_Base, Init_ogrn_inn_mixin):
 
         if tablename is None:
             raise TableNotFound(self._database_model)
-
         for element in elements:
             if element.tag == 'Документ':
                 self.org_info = self._org_info
@@ -202,7 +201,6 @@ class Tag_parser_LICENSES(Tag_parser_Base, Init_ogrn_inn_mixin):
                 if self.org_info is None:
                     print('Database model is not found.')
                     continue
-
                 self._parse_recursive(element=element)
                 element.clear()
 
@@ -239,31 +237,29 @@ class Tag_parser_LICENSES(Tag_parser_Base, Init_ogrn_inn_mixin):
 class Tag_parser_SNO_UL(Tag_parser_Base):
     _database_model = sno_shadow
 
-    def handle(self,
-               elements: etree._Element, ) -> Parser_output:
-        output = []
-        tablename = self._tablename
-
-        if tablename is None:
-            raise TableNotFound(self._database_model)
-
-        for element in elements:
-            if element.tag == 'Документ':
-                self.org_info = self._org_info
-
-                if self.org_info is None:
-                    print('Database model is not found.')
-                    continue
-
-                self._parse_recursive(element=element)
-                element.clear()
-
-                if not self.org_info['additional_okveds_data']: continue
-
-                output.append(self.org_info)
-        output = Parser_output(tablename=tablename, data=output)
-        # output = {'tablename': tablename, 'data': output}
-        return output
+    # def handle(self,
+    #            elements: etree._Element, ) -> Parser_output:
+    #     output = []
+    #     tablename = self._tablename
+    #
+    #     if tablename is None:
+    #         raise TableNotFound(self._database_model)
+    #
+    #     for element in elements:
+    #         if element.tag == 'Документ':
+    #             self.org_info = self._org_info
+    #
+    #             if self.org_info is None:
+    #                 print('Database model is not found.')
+    #                 continue
+    #
+    #             self._parse_recursive(element=element)
+    #             element.clear()
+    #
+    #             output.append(self.org_info)
+    #     output = Parser_output(tablename=tablename, data=output)
+    #     # output = {'tablename': tablename, 'data': output}
+    #     return output
 
 
     def _parse_recursive(self,
