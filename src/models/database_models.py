@@ -263,6 +263,12 @@ class licenses_mixin(Base_mixin):
     ogrn: Mapped[str] = mapped_column(VARCHAR(15))
     licenses_data: Mapped[list[LICENSES_DATA]] = mapped_column(JSONB)
 
+    base_column_values = {
+        'inn': None,
+        'ogrn': None,
+        'licenses_data': [],
+    }
+
     # num: Mapped[str]
     # date: Mapped[datetime | None]
     # date_start: Mapped[datetime | None]
