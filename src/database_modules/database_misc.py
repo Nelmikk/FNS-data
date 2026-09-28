@@ -57,7 +57,6 @@ def batch_data(batch_size: int = 16_000, ):
 async def fetch_result(results: CursorResult, ) -> AsyncGenerator:
     keys = results.keys()._keys
     for result in results.fetchall():
-        print(result)
         yield {k: v for k, v in zip(keys, result) if k != 'id'}
     ...
 

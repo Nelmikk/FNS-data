@@ -30,9 +30,9 @@ async def get_licenses(value: str, ) -> list[api_models.licenses] | str:
 async def get_sno(value: str, ) -> list[api_models.sno]:
     return await get_sno_endpoint(value=value)
 
-# @app.get('/v1/organisations/{value}/full_info')
-# async def get_full_organisation_data(value: str, ) -> list[api_models.full_info] | str:
-#     return await get_full_organisation_data_endpoint(value=value)
+@app.get('/v1/organisations/{value}/full_data')
+async def get_full_organisation_data(value: str, ) -> list[api_models.full_data] | str:
+    return await get_full_data(value=value)
 
 
 

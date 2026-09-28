@@ -228,6 +228,7 @@ class Tag_parser_LICENSES(Tag_parser_Base, Init_ogrn_inn_mixin):
 
         elif element.tag == 'СвЛиценз':
             self.org_info['licenses_data'].append({
+                'num': element.get('НомЛиценз') if element.get('НомЛиценз') else None,
                 'date': datetime.strptime(element.get('ДатаЛиценз'), '%d.%m.%Y').date().isoformat() if element.get('ДатаЛиценз') else None,
                 'date_start': datetime.strptime(element.get('ДатаНачЛиценз'), '%d.%m.%Y').date().isoformat() if element.get('ДатаНачЛиценз') else None,
                 'date_end': datetime.strptime(element.get('ДатаКонЛиценз'), '%d.%m.%Y').date().isoformat() if element.get('ДатаКонЛиценз') else None,
@@ -236,31 +237,6 @@ class Tag_parser_LICENSES(Tag_parser_Base, Init_ogrn_inn_mixin):
 
 class Tag_parser_SNO_UL(Tag_parser_Base):
     _database_model = sno_shadow
-
-    # def handle(self,
-    #            elements: etree._Element, ) -> Parser_output:
-    #     output = []
-    #     tablename = self._tablename
-    #
-    #     if tablename is None:
-    #         raise TableNotFound(self._database_model)
-    #
-    #     for element in elements:
-    #         if element.tag == 'Документ':
-    #             self.org_info = self._org_info
-    #
-    #             if self.org_info is None:
-    #                 print('Database model is not found.')
-    #                 continue
-    #
-    #             self._parse_recursive(element=element)
-    #             element.clear()
-    #
-    #             output.append(self.org_info)
-    #     output = Parser_output(tablename=tablename, data=output)
-    #     # output = {'tablename': tablename, 'data': output}
-    #     return output
-
 
     def _parse_recursive(self,
                          element: etree._Element, ):
@@ -283,18 +259,6 @@ class Tag_parser_SNO_UL(Tag_parser_Base):
 
 class Tag_parser_SNO_IP(Tag_parser_Base):
     _database_model = sno_shadow
-    # def __init__(self, ):
-    #     self._database_model = sno_shadow
-
-    # @property
-    # def _org_info(self, ) -> dict | list | None:
-    #     return create_dict_from_database_model(sno_shadow)
-    #
-    #
-    # @property
-    # def _tablename(self, ) -> str | None:
-    #     return get_tablename_from_database_model(sno_shadow)
-
 
     def _parse_recursive(self,
                          element: etree._Element, ):

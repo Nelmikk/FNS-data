@@ -7,30 +7,20 @@ class fns_main_info(BaseModel):
 
     inn: str
     ogrn: str
-    main_okved_name: str | None
-    main_okved_code: str | None
-    full_name: str | None
-    short_name: str | None
-    subject_type: str | None
-    subject_category: str | None
-    inclusion_date: datetime | None
-    is_social: str | None
-    avg_employees_num: int | None
-    region_code: str | None
-    region: str | None
-    district: str | None
-    area: str | None
+    main_okved_name: str | None = None
+    main_okved_code: str | None = None
+    full_name: str | None = None
+    short_name: str | None = None
+    subject_type: str | None = None
+    subject_category: str | None = None
+    inclusion_date: datetime | None = None
+    is_social: str | None = None
+    avg_employees_num: int | None = None
+    region_code: str | None = None
+    region: str | None = None
+    district: str | None = None
+    area: str | None = None
 
-
-# class sno_data(BaseModel):
-#     model_config = ConfigDict(from_attributes=True)
-#
-#     eshn: bool
-#     usn: bool
-#     ausn: bool
-#     srp: bool
-#     psn: bool
-#     npd: bool
 
 class sno(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -46,38 +36,63 @@ class sno(BaseModel):
     npd: bool
 
 
-class okveds_data(BaseModel):
+class ADDITIONAL_OKVEDS_DATA(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    letter: str
-    name: str
-    code: str
-
+    code: str | None = None
+    name: str | None = None
 
 class okveds(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     inn: str
     ogrn: str
-    data: list[okveds_data]
+    additional_okveds_data: list[ADDITIONAL_OKVEDS_DATA]
 
 
-
-class licenses_data(BaseModel):
+class LICENSES_DATA(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     num: str | None = None
-    date: datetime | None = None
+    date: str | None = None
     date_start: datetime | None = None
     date_end: datetime | None = None
-
 
 class licenses(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     inn: str
     ogrn: str
-    data: list[licenses_data | None] | None = None
+    licenses_data: list[LICENSES_DATA]
+
+
+class full_data(BaseModel):
+    inn: str
+    ogrn: str
+    main_okved_name: str | None = None
+    main_okved_code: str | None = None
+    full_name: str | None = None
+    short_name: str | None = None
+    subject_type: str | None = None
+    subject_category: str | None = None
+    inclusion_date: datetime | None = None
+    is_social: str | None = None
+    avg_employees_num: int | None = None
+    region_code: str | None = None
+    region: str | None = None
+    district: str | None = None
+    area: str | None = None
+
+    eshn: bool | None = None
+    usn: bool | None = None
+    ausn: bool | None = None
+    srp: bool | None = None
+    psn: bool | None = None
+    npd: bool | None = None
+
+    additional_okveds_data: list[ADDITIONAL_OKVEDS_DATA] | None = []
+
+    licenses_data: list[LICENSES_DATA] | None = []
 
 
 # class full_info(BaseModel):

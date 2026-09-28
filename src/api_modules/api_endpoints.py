@@ -1,5 +1,4 @@
 from fastapi import HTTPException
-import asyncio
 
 from src.models import api_models
 from src.database_modules.core import *
@@ -27,10 +26,17 @@ search_type_licenses = {
 }
 
 search_type_sno = {
-    12: select_sno_ip_by_inn_async,                   # Поиск по ИНН физ лиц
-    10: select_sno_ul_by_inn_async,                   # Поиск по ИНН юр лиц
-    13: select_sno_ul_by_ogrn_async,                  # Поиск по ОГРН юр лиц
-    15: select_sno_ip_by_ogrn_async,                  # Поиск по ОГРН физ лиц
+    12: select_sno_ip_by_inn_async,                     # Поиск по ИНН физ лиц
+    10: select_sno_ul_by_inn_async,                     # Поиск по ИНН юр лиц
+    13: select_sno_ul_by_ogrn_async,                    # Поиск по ОГРН юр лиц
+    15: select_sno_ip_by_ogrn_async,                    # Поиск по ОГРН физ лиц
+}
+
+search_type_full_data = {
+    12: select_full_data_ip_by_inn_async,               # Поиск по ИНН физ лиц
+    10: select_full_data_ul_by_inn_async,               # Поиск по ИНН юр лиц
+    13: select_full_data_ul_by_ogrn_async,              # Поиск по ОГРН юр лиц
+    15: select_full_data_ip_by_ogrn_async,              # Поиск по ОГРН физ лиц
 }
 
 
@@ -77,6 +83,17 @@ async def get_sno_endpoint(value: str, ) -> list[api_models.sno]:
     results = await search_type_sno[val_len](value)
 
     return [api_models.sno.model_validate(result) async for result in results if result is not None]
+
+
+async def get_full_data(value: str, ) -> list[api_models.full_data]:
+    val_len = len(value)
+
+    if val_len not in search_type_full_data.keys():
+        raise HTTPException(status_code=400, detail='ValueError')
+
+    results = await search_type_full_data[val_len](value)
+
+    return [api_models.full_data.model_validate(result) async for result in results if result is not None]
 
 
 # async def get_full_organisation_data_endpoint(value: str, ) -> list[api_models.full_info] | str:
