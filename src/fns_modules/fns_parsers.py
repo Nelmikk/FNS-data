@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from copy import deepcopy
 
 from src.models.other_models import *
@@ -8,29 +7,20 @@ from src.fns_modules.fns_misc import *
 from src.errors.database_errors import TableNotFound
 
 
-
-class Init_ogrn_inn_mixin:
-    def initialize(self, element: etree._Element, ):
-        if element.tag == 'Документ':
-            for child_element in element:
-                self.initialize(element=child_element)
-                if self.ogrn and self.inn:
-                    return True
-        elif element.tag == 'ИПВклМСП':
-            self.inn, self.ogrn = str(element.get('ИННФЛ')), str(element.get('ОГРНИП'))
-            return True
-        elif element.tag == 'ОргВклМСП':
-            self.inn, self.ogrn = str(element.get('ИННЮЛ')), str(element.get('ОГРН'))
-            return True
-        return False
-
-
-
 class Tag_parser_Base(ABC):
+    """
+    Base-класс для наследования парсеров xml-файлов.
+    """
+    # Обязательно задается внутри класса ДО инициилизации и обязательно должен иметь ниже перечисленные родительские классы.
     _database_model: type[Base_shadow_table, Base, Base_mixin]
-    _pass_on_empty_data: bool = False
+
     def handle(self,
                elements: etree._Element, ) -> Parser_output:
+        """
+        Парсинг xml-файла, который передается в виде _Element.
+        :param elements:
+        :return:
+        """
         output = []
         tablename = self._tablename
 
@@ -42,32 +32,41 @@ class Tag_parser_Base(ABC):
                 self.org_info = self._org_info
 
                 if self.org_info is None:
-                    print('Database model is not found.')
-                    continue
+                    raise TableNotFound(self._database_model)
 
                 self._parse_recursive(element=element)
                 element.clear()
                 output.append(self.org_info)
         output = Parser_output(tablename=tablename, data=output)
-        # output = {'tablename': tablename, 'data': output}
         return output
 
 
     @property
-    # @abstractmethod
     def _org_info(self, ) -> dict:
+        """
+        Возвращает пустой словарь для заполнения, исходя из модели таблицы.
+        :return:
+        """
         return deepcopy(self._database_model.base_column_values)
 
 
     @property
-    # @abstractmethod
     def _tablename(self, ) -> str | None:
+        """
+        Возвращает название таблицы, исходя из модели таблицы.
+        :return:
+        """
         return self._database_model.__tablename__
 
 
     @abstractmethod
     def _parse_recursive(self,
                          element: etree._Element, ):
+        """
+        Рекурсивный парсинг xml-файла.
+        :param element:
+        :return:
+        """
         ...
 
 
@@ -130,7 +129,7 @@ class Tag_parser_OGRN_MAIN_INFO(Tag_parser_Base):
 
 
 
-class Tag_parser_ADDITIONAL_OKVEDS(Tag_parser_Base, Init_ogrn_inn_mixin):
+class Tag_parser_ADDITIONAL_OKVEDS(Tag_parser_Base, ):
     _database_model = okveds_shadow
 
     def handle(self,
@@ -184,7 +183,7 @@ class Tag_parser_ADDITIONAL_OKVEDS(Tag_parser_Base, Init_ogrn_inn_mixin):
 
 
 
-class Tag_parser_LICENSES(Tag_parser_Base, Init_ogrn_inn_mixin):
+class Tag_parser_LICENSES(Tag_parser_Base, ):
     _database_model = licenses_shadow
 
     def handle(self,
@@ -284,8 +283,14 @@ class Tag_parser_SNO_IP(Tag_parser_Base):
 
 
 class Parser_Base(ABC):
+    """
+    Base-класс для парсеров xml-файлов.
+    """
+    # Базовый у всех, задавать в классах-наследниках не надо.
     unzipper: Unzipper
+    # Базовый у всех, задавать в классах-наследниках не надо.
     reader: File_reader
+    # Обязательно задается у каждого отдельного класса-наследника.
     tag_parser: Tag_parser_Base
 
     @abstractmethod
@@ -298,26 +303,23 @@ class Parser_Base(ABC):
               file_dir: str | Path,
               left: int = 0,
               right: int = 0, ) -> Generator:
-        return self._parse(file_dir=file_dir,
-                           left=left,
-                           right=right)
-
-
-
-    def _parse(self,
-               file_dir: str | Path,
-               left: int = 0,
-               right: int = 0, ) -> Generator:
-
+        """
+        Парсинг xml-файла или xml-файлов в заданных переменными left и right границах zip-архив.
+            Возвращается генератор спаршенных данных.
+            Если
+        :param file_dir:
+        :param left:
+        :param right:
+        :return:
+        """
         file_dir = file_dir if isinstance(file_dir, Path) else Path(file_dir)
 
         if str(file_dir).endswith('.zip'):
-            # files = self.unzipper.unzip_file(file_dir=file_dir, unzip_dir=unzip_dir, left=left, right=right)
-            files = self.unzipper.unzip_data(file_dir=file_dir, left=left, right=right)
+            files = self.unzipper.unzip_data(file_dir=file_dir, left=left, right=right) # Генератор
 
         elif str(file_dir).endswith('.xml'):
-            files = [self.unzipper.unzip_data(file_dir=file_dir)]
-
+            files = [self.unzipper.unzip_data(file_dir=file_dir)]                       # Массив из одного элемента
+        # Если файл имеет неподдерживаемый формат, то возвращает None.
         else:
             print(f'Unsupported file format "{file_dir}"')
             return None
@@ -325,6 +327,29 @@ class Parser_Base(ABC):
         for file_data in files:
             output = self._parse_xml(file_data=file_data,)
             yield output
+
+
+
+    # def _parse(self,
+    #            file_dir: str | Path,
+    #            left: int = 0,
+    #            right: int = 0, ) -> Generator:
+    #
+    #     file_dir = file_dir if isinstance(file_dir, Path) else Path(file_dir)
+    #
+    #     if str(file_dir).endswith('.zip'):
+    #         files = self.unzipper.unzip_data(file_dir=file_dir, left=left, right=right) # Генератор
+    #
+    #     elif str(file_dir).endswith('.xml'):
+    #         files = [self.unzipper.unzip_data(file_dir=file_dir)]                       # Массив из одного элемента
+    #
+    #     else:
+    #         print(f'Unsupported file format "{file_dir}"')
+    #         return None
+    #
+    #     for file_data in files:
+    #         output = self._parse_xml(file_data=file_data,)
+    #         yield output
 
 
     def _parse_xml(self,
@@ -339,14 +364,12 @@ class Parser_Base(ABC):
 class Parser_RSMP_MAIN_INFO(Parser_Base):
     tag_parser = Tag_parser_OGRN_MAIN_INFO
     def __init__(self, ):
-        # self.tag_parser = self.tag_parser()
         super().__init__()
 
 
 class Parser_RSMP_ADDITIONAL_OKVEDS(Parser_Base):
     tag_parser = Tag_parser_ADDITIONAL_OKVEDS
     def __init__(self, ):
-        # self.tag_parser = self.tag_parser()
         super().__init__()
 
 
@@ -354,7 +377,6 @@ class Parser_RSMP_LICENSES(Parser_Base):
     tag_parser = Tag_parser_LICENSES
 
     def __init__(self, ):
-        # self.tag_parser = self.tag_parser()
         super().__init__()
 
 
@@ -362,13 +384,11 @@ class Parser_SNO_UL(Parser_Base):
     tag_parser = Tag_parser_SNO_UL
 
     def __init__(self, ):
-        # self.tag_parser = self.tag_parser()
         super().__init__()
 
 
 class Parser_SNO_IP(Parser_Base):
     tag_parser = Tag_parser_SNO_IP
     def __init__(self, ):
-#         self.tag_parser = self.tag_parser()
         super().__init__()
 

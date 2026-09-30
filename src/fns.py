@@ -8,10 +8,11 @@ from pathlib import Path
 from zipfile import ZipFile
 import time
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
+from sqlalchemy.ext.asyncio import create_async_engine
 
-from src.database_modules.core import insert_data_async, create_index, rename_tables, drop_temp_table, rename_index
-from src.database_modules.orm import drop_tables_from_models, create_tables_from_models
+from src.database_modules.insert_queries.queries import *
+from src.database_modules.metadata_queries.queries import  *
+
 from src.database_modules.database_conf import settings_super_user
 
 from src.models.other_models import Parser_output
@@ -29,8 +30,10 @@ async def async_generator_wrapper(sync_generator: Generator, ):
     :return:
     """
     def get_next(generator: Generator):
-        try: return next(generator)
-        except: return None
+        try:
+            return next(generator)
+        except:
+            return None
     while True:
         item = await asyncio.to_thread(get_next, sync_generator)
         if item is None: break
@@ -222,12 +225,6 @@ class Base_FNS_data_updater(ABC):
         """
         if isinstance(file_dir, str):
             file_dir = Path(file_dir)
-        # elif file_dir is None:
-        #     print(f'{self.__class__.__name__} is downloading zip-file')
-        #     file_dir = self.download()
-        # # Если ошибка во время скачивания, то вернет None.
-        # if file_dir is None:
-        #     return
 
         if reset_table: self._reset_table()
 

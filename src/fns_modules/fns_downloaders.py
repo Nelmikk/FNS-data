@@ -15,34 +15,6 @@ class Downloader_Base:
 
     _file_name = 'downloaded_file.zip'
 
-    # @staticmethod
-    # def error_handler(func: Callable, ) -> Callable:
-    #     """
-    #     Обработка ошибок.
-    #     :param func:
-    #     :return:
-    #     """
-    #     @wraps(func)
-    #     def wrapper(self,
-    #                 *args,
-    #                 **kwargs, ) -> bool | str:
-    #         try:
-    #             if not func(self, *args, **kwargs):
-    #                 return False
-    #         except Exception as e:
-    #             print(f'{e} | {e.__class__} --- {self.__class__.__name__}')
-    #             if e.__class__ == FileNotFoundError:                # Ошибка во время скачивания файла
-    #                 self._del_error_file()                          # Удаление частично скачанного файла
-    #                 return False
-    #             elif e.__class__ == NotADirectoryError:             # Ошибка при создании директории
-    #                 return False
-    #             else:
-    #                 return False
-    #         return f'{self._download_dir}/{self._file_name}'        # Возврашает местоположение скачанного файла
-    #         ...
-    #
-    #     return wrapper
-
 
     def _del_error_file(self, ):
         """
@@ -144,8 +116,6 @@ class Downloader_Base:
             return None
         self._download()
         return Path(f'{self.download_dir}/{self._file_name}')
-        ...
-
 
 
 

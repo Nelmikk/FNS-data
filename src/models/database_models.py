@@ -36,7 +36,7 @@ class Base_index(TypedDict):
 
 class Base(DeclarativeBase):
     DB_indexes: tuple[Base_index] = tuple()
-    ...
+
 
 class Base_shadow_table:
     """
@@ -87,28 +87,21 @@ class fns_main_info_mixin(Base_mixin):
     'area': None,
     }
 
-    # __table_args__ = (
-    #     Index('index_inn_main_info',
-    #           'inn',
-    #           postgresql_using='hash'),         # Хэш индекс, тк частое обращения по конкретному ИНН
-    #     Index('index_ogrn_main_info',
-    #           'ogrn',
-    #           postgresql_using='hash'),         # Хэш индекс, тк частое обращения по конкретному ОГРН
-    # )
-
 
 class fns_main_info(fns_main_info_mixin, Base):
     __tablename__ = 'fns_main_info'
 
     DB_indexes = [Base_index(index_name=f'inn_index_fns_main_info', column_index='inn', index_type='btree'),
-                  Base_index(index_name='ogrn_index_fns_main_info', column_index='ogrn', index_type='btree')]
+                  Base_index(index_name='ogrn_index_fns_main_info', column_index='ogrn', index_type='btree')
+                  ]
 
 
 class fns_main_info_shadow(fns_main_info_mixin, Base, Base_shadow_table):
     __tablename__ = 'fns_main_info_shadow'
     non_shadow_table = fns_main_info
     DB_indexes = [Base_index(index_name=f'inn_index_fns_main_info_shadow', column_index='inn', index_type='btree'),
-                  Base_index(index_name='ogrn_index_fns_main_info_shadow', column_index='ogrn', index_type='btree')]
+                  Base_index(index_name='ogrn_index_fns_main_info_shadow', column_index='ogrn', index_type='btree')
+                  ]
 
 
 class sno_mixin(Base_mixin):
@@ -137,19 +130,21 @@ class sno_mixin(Base_mixin):
         'npd': False,
     }
 
-    # _indexes = [Base_index(index_name='inn_index', column_index='inn', index_type='hash'), ]
-
 
 class sno(sno_mixin, Base):
     __tablename__ = 'sno'
-    DB_indexes = [Base_index(index_name=f'inn_index_fns_sno', column_index='inn', index_type='btree'), ]
+    DB_indexes = [Base_index(index_name='inn_index_fns_sno', column_index='inn', index_type='btree'),
+                  Base_index(index_name='ogrn_index_fns_sno', column_index='ogrn', index_type='btree')
+                  ]
 
 
 class sno_shadow(sno_mixin, Base, Base_shadow_table):
     __tablename__ = 'sno_shadow'
     non_shadow_table = sno
 
-    DB_indexes = [Base_index(index_name=f'inn_index_fns_sno_shadow', column_index='inn', index_type='btree'), ]
+    DB_indexes = [Base_index(index_name='inn_index_fns_sno_shadow', column_index='inn', index_type='btree'),
+                  Base_index(index_name='ogrn_index_fns_sno_shadow', column_index='ogrn', index_type='btree')
+                  ]
 
 
 class okveds_mixin(Base_mixin):
@@ -167,59 +162,19 @@ class okveds_mixin(Base_mixin):
         'ogrn': None,
         'additional_okveds_data': [],
     }
-    # name: Mapped[str]
-    # code: Mapped[str]
-
-    # _indexes = [Base_index(index_name='inn_index', column_index='inn', index_type='hash')]
-
-    # __table_args__ = (
-    #     Index('index_inn_okveds',
-    #           'inn',
-    #           postgresql_using='hash'),
-    #     Index('index_ogrn_okveds',
-    #           'ogrn',
-    #           postgresql_using='hash')
-    # )
 
 
 class okveds(okveds_mixin, Base):
     __tablename__ = 'okveds'
-    DB_indexes = [Base_index(index_name=f'inn_index_okveds', column_index='inn', index_type='btree'), ]
+    DB_indexes = [Base_index(index_name='inn_index_okveds', column_index='inn', index_type='btree'),
+                  Base_index(index_name='ogrn_index_okveds', column_index='ogrn', index_type='btree')]
 
 
 class okveds_shadow(okveds_mixin, Base, Base_shadow_table):
     __tablename__ = 'okveds_shadow'
     non_shadow_table = okveds
-    DB_indexes = [Base_index(index_name=f'inn_index_okveds_shadow', column_index='inn', index_type='btree'), ]
-
-
-
-class relevant_okveds_mixin(Base_mixin):
-    """
-    Плейсхолдер, если потребуется и эту таблицу перемещать через алембик.
-    """
-    # id: Mapped[int] = mapped_column(BigInteger,
-    #                                 primary_key=True,
-    #                                 autoincrement=True, )
-    letter: Mapped[str]
-    code: Mapped[str] = mapped_column(unique=True,
-                                      primary_key=True,
-                                      autoincrement=False)
-    name: Mapped[str]
-    base_column_values = {
-        'letter': None,
-        'code': None,
-        'name': None,
-    }
-
-
-class relevant_okveds(relevant_okveds_mixin, Base):
-    __tablename__ = 'relevant_okveds'
-
-
-class relevant_okveds_shadow(relevant_okveds_mixin, Base, Base_shadow_table):
-    __tablename__ = 'relevant_okveds_shadow'
-    non_shadow_table = relevant_okveds
+    DB_indexes = [Base_index(index_name='inn_index_okveds_shadow', column_index='inn', index_type='btree'),
+                  Base_index(index_name='ogrn_index_okveds_shadow', column_index='ogrn', index_type='btree')]
 
 
 
@@ -236,13 +191,6 @@ class licenses_mixin(Base_mixin):
         'ogrn': None,
         'licenses_data': [],
     }
-
-    # num: Mapped[str]
-    # date: Mapped[datetime | None]
-    # date_start: Mapped[datetime | None]
-    # date_end: Mapped[datetime | None]
-
-    # _indexes = [Base_index(index_name='inn_index', column_index='inn', index_type='hash')]
 
 
 class licenses(licenses_mixin, Base):

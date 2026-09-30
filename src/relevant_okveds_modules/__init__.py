@@ -1,4 +1,0 @@
-from src.relevant_okveds_modules.relevant_okveds_parser import Parser_relevant_okveds
-from src.relevant_okveds_modules.relevant_okveds_downloader import Downloader_relevant_okveds
-
-__all__ = ['Parser_relevant_okveds', 'Downloader_relevant_okveds']

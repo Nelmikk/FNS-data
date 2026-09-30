@@ -12,7 +12,6 @@ class DirectoryDoesNotExist(Exception):
     def __init__(self,
                  file_dir: str, ):
         super().__init__(f'Directory does not exist "{file_dir}".')
-        ...
 
 
 class NoFileToDelete(Exception):

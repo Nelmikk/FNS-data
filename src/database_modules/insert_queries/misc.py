@@ -1,11 +1,14 @@
-from typing import Callable, AsyncGenerator, TypedDict
 from functools import wraps
+from typing import Callable
 from inspect import iscoroutinefunction
-from sqlalchemy.engine import CursorResult
-from sqlalchemy import TextClause
 
 
 def batch_data(batch_size: int = 16_000, ):
+    """
+    Разделение больших запросов на меньшие запросы.
+    :param batch_size:  Размер строк в запросе.
+    :return:
+    """
     def batch(func: Callable, ):
         @wraps(func)
         async def async_wrapper(*args, **kwargs, ):
@@ -50,40 +53,3 @@ def batch_data(batch_size: int = 16_000, ):
         else:
             return sync_wrapper
     return batch
-
-
-
-
-async def fetch_result(results: CursorResult, ) -> AsyncGenerator:
-    keys = results.keys()._keys
-    for result in results.fetchall():
-        yield {k: v for k, v in zip(keys, result) if k != 'id'}
-    ...
-
-
-async def divide_output(results: CursorResult, ) -> AsyncGenerator:
-    keys = results.keys()
-    ogrn = 0
-    output = None
-
-    for result in results.fetchall():
-
-        row = {k: v for k, v in zip(keys, result) if k != 'id'}
-        if row['ogrn'] != ogrn:
-
-            if ogrn:
-                response, output = output, None
-                yield response
-
-            ogrn = row['ogrn']
-            output = {'inn': row['inn'], 'ogrn': row['ogrn'], 'data': []}
-            output['data'].append({k: v for k, v in row.items() if k not in ['inn', 'ogrn']})
-
-        else:
-            output['data'].append({k: v for k, v in row.items() if k not in ['inn', 'ogrn']})
-    yield output
-
-
-class SELECT_QUERY(TypedDict):
-    statement: TextClause
-    parameters: dict[str, str]

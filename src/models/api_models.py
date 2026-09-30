@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 
@@ -90,6 +90,9 @@ class full_data(BaseModel):
     psn: bool | None = None
     npd: bool | None = None
 
-    additional_okveds_data: list[ADDITIONAL_OKVEDS_DATA] | None = []
+    additional_okveds_data: list[ADDITIONAL_OKVEDS_DATA] | None = list()
 
-    licenses_data: list[LICENSES_DATA] | None = []
+    licenses_data: list[LICENSES_DATA] | None = list()
+
+
+__all__ = ['full_data', 'licenses', 'okveds', 'sno', 'fns_main_info']
