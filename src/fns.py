@@ -4,7 +4,6 @@ import warnings
 from abc import ABC
 from typing import Final, Generator
 from pathlib import Path
-
 from zipfile import ZipFile
 import time
 
@@ -21,6 +20,7 @@ from src.fns_modules.fns_downloaders import Downloader_Base
 from src.fns_modules.fns_parsers import Parser_Base, Parser_SNO_UL, Parser_SNO_IP, Parser_RSMP_MAIN_INFO, Parser_RSMP_ADDITIONAL_OKVEDS, Parser_RSMP_LICENSES
 from src.fns_modules.fns_downloaders import Downloader_RSMP, Downloader_SNR
 
+mp.set_start_method('spawn', force=True)
 
 
 async def async_generator_wrapper(sync_generator: Generator, ):
