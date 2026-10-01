@@ -52,9 +52,9 @@ def _run_parse_and_insert(*args,
 
 async def _parse_and_insert(parser: type[Parser_Base],
                             file_dir: str | Path,
-                            left: int,
-                            right: int,
-                            semaphore_count: int, ) -> None:
+                            left: int = 0,
+                            right: int = 1,
+                            semaphore_count: int = 1, ) -> None:
     """
     Аснихронный метод для парсинга данных и занесения их в БД.
 
@@ -228,9 +228,12 @@ class Base_FNS_data_updater(ABC):
 
         if reset_table: self._reset_table()
 
-        xml_files_num = _xml_files_num(zip_file_dir=file_dir)
-        self._create_processes(xml_files_num=xml_files_num,
-                               file_dir=file_dir, )
+        if str(file_dir).endswith('.zip'):
+            xml_files_num = _xml_files_num(zip_file_dir=file_dir)
+            self._create_processes(xml_files_num=xml_files_num,
+                                   file_dir=file_dir, )
+        elif str(file_dir).endswith('.xml'):
+            _run_parse_and_insert(parser=self._parser, file_dir=file_dir, semaphore_count=self._semaphore_count)
 
         if delete_file_after_update: Path(fr'{file_dir}').unlink(missing_ok=True)
 

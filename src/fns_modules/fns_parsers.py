@@ -318,7 +318,7 @@ class Parser_Base(ABC):
             files = self.unzipper.unzip_data(file_dir=file_dir, left=left, right=right) # Генератор
 
         elif str(file_dir).endswith('.xml'):
-            files = [self.unzipper.unzip_data(file_dir=file_dir)]                       # Массив из одного элемента
+            files = self.unzipper.unzip_data(file_dir=file_dir)                         # Массив из одного элемента
         # Если файл имеет неподдерживаемый формат, то возвращает None.
         else:
             print(f'Unsupported file format "{file_dir}"')
@@ -327,29 +327,6 @@ class Parser_Base(ABC):
         for file_data in files:
             output = self._parse_xml(file_data=file_data,)
             yield output
-
-
-
-    # def _parse(self,
-    #            file_dir: str | Path,
-    #            left: int = 0,
-    #            right: int = 0, ) -> Generator:
-    #
-    #     file_dir = file_dir if isinstance(file_dir, Path) else Path(file_dir)
-    #
-    #     if str(file_dir).endswith('.zip'):
-    #         files = self.unzipper.unzip_data(file_dir=file_dir, left=left, right=right) # Генератор
-    #
-    #     elif str(file_dir).endswith('.xml'):
-    #         files = [self.unzipper.unzip_data(file_dir=file_dir)]                       # Массив из одного элемента
-    #
-    #     else:
-    #         print(f'Unsupported file format "{file_dir}"')
-    #         return None
-    #
-    #     for file_data in files:
-    #         output = self._parse_xml(file_data=file_data,)
-    #         yield output
 
 
     def _parse_xml(self,
