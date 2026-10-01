@@ -1,5 +1,4 @@
 import requests
-import os
 from pathlib import Path
 
 from bs4 import BeautifulSoup
@@ -10,7 +9,7 @@ from src.errors.downloader_errors import DownloadError
 
 
 class Downloader_Base:
-    download_dir: Path = Path(fr'{os.getcwd()}\downloaded_dir')
+    download_dir: Path = Path(fr'{Path.cwd()}\downloaded_dir')
     _page_url = None
 
     _file_name = 'downloaded_file.zip'
@@ -22,7 +21,7 @@ class Downloader_Base:
         :return:
         """
         try:
-            os.remove(fr'{self.download_dir}\{self._file_name}')
+            Path.unlink(Path(fr'{self.download_dir}\{self._file_name}'))
             print('Partially downloaded file is deleted.')
         except:
             print('Partially downloaded file is not deleted.')
@@ -34,9 +33,10 @@ class Downloader_Base:
         :return:
         """
         try:
-            if not self.download_dir:
+            if not self.download_dir.exists():
                 self.download_dir.mkdir()
-        except: raise NotADirectoryError(f'Can not create directory "{self.download_dir}".')
+        except:
+            raise NotADirectoryError(f'Can not create directory "{self.download_dir}".')
 
 
 
@@ -47,7 +47,7 @@ class Downloader_Base:
         """
         while True:
             i = 1
-            if not (self._file_name in os.listdir(self.download_dir)):
+            if not (self._file_name in Path.iterdir(self.download_dir)):
                 break
             warnings.warn(f'{self._file_name} is already in download directory. '
                           f'The file will be named {i}_{self._file_name}.')
@@ -88,7 +88,7 @@ class Downloader_Base:
         Находит ЮРЛ файла и задает для него имя.
         :return:
         """
-        page_content = requests.get(self._page_url).content
+        page_content = requests.get(self._page_url, stream=True).content
         page_content = BeautifulSoup(page_content, 'lxml')
         file_url = [i for i in page_content.find_all(string=re.compile('https://file.nalog.ru/opendata'))
                           if '.zip' in i][0]
@@ -108,7 +108,7 @@ class Downloader_Base:
 
     def download(self, ) -> Path | None:
         """
-        Вовзращает название записанного файла при успехе, иначе - False.
+        Вовзращает название записанного файла при успехе, иначе - None.
         :return:
         """
         if self._page_url is None:
