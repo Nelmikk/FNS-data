@@ -46,7 +46,7 @@ def batch_data(batch_size: int = 16_000, ):
                          tablename=kwargs['tablename'],
                          values=kwargs['values'][left:left + step],
                          engine=kwargs['engine'], )
-                return
+            return
 
         if iscoroutinefunction(func):
             return async_wrapper
