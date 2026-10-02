@@ -1,8 +1,9 @@
+from functools import wraps
 from pathlib import Path
 from typing import Generator
 from zipfile import ZipFile
 from lxml import etree
-
+import logging
 
 
 class Unzipper:
@@ -22,17 +23,21 @@ class Unzipper:
         :return:
         """
         if str(file_dir).endswith('.zip'):
-            with ZipFile(file_dir, 'r') as zf:
-                if right is None:
-                    right = len(zf.namelist())
-                left = left if left >= 0 else 0
+            try:
+                with ZipFile(file_dir, 'r') as zf:
+                    if right is None:
+                        right = len(zf.namelist())
+                    left = left if left >= 0 else 0
 
-                right = right if 0 < right <= len(zf.namelist()) else len(zf.namelist())
+                    right = right if 0 < right <= len(zf.namelist()) else len(zf.namelist())
 
-                files = zf.namelist()[left:right]
+                    files = zf.namelist()[left:right]
 
-                for file in files:
-                    yield etree.fromstring(zf.open(file).read())
+                    for file in files:
+                        yield etree.fromstring(zf.open(file).read())
+            except Exception as e:
+                logging.error('Error reading zip-file. Zip-file could be corrupted.')
+                yield None
         else:
             yield etree.parse(file_dir).getroot()
 
@@ -48,3 +53,21 @@ class File_reader:
         """
         root = etree.parse(file_dir).getroot()
         return root
+
+
+def retry(retry_nums: int = 1, ):
+    def f(func, ):
+        @wraps(func)
+        def wrapper(*args, **kwargs, ):
+            retry_num = 0
+            while True:
+                retry_num += 1
+
+                if retry_num > retry_nums:
+                    return False
+                print(f'\n{retry_num} attempt ...')
+                logging.info(f'{retry_num} attempt ...')
+                if func(*args, **kwargs) is True:
+                    return True
+        return wrapper
+    return f

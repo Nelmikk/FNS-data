@@ -6,6 +6,7 @@ from typing import Final, Generator
 from pathlib import Path
 from zipfile import ZipFile
 import time
+import logging
 
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -16,7 +17,7 @@ from src.database_modules.database_conf import settings_super_user
 
 from src.models.other_models import Parser_output
 
-from src.fns_modules.fns_downloaders import Downloader_Base
+from src.fns_modules.fns_downloaders import Downloader_Base, Downloader_SNRIP
 from src.fns_modules.fns_parsers import Parser_Base, Parser_SNO_UL, Parser_SNO_IP, Parser_RSMP_MAIN_INFO, Parser_RSMP_ADDITIONAL_OKVEDS, Parser_RSMP_LICENSES
 from src.fns_modules.fns_downloaders import Downloader_RSMP, Downloader_SNR
 
@@ -52,32 +53,35 @@ def _run_parse_and_insert(*args,
 
 async def _parse_and_insert(parser: type[Parser_Base],
                             file_dir: str | Path,
+                            log_filename: str,
                             left: int = 0,
                             right: int = 1,
                             semaphore_count: int = 1, ) -> None:
     """
-    Аснихронный метод для парсинга данных и занесения их в БД.
+    Аснихронная функция для парсинга данных и занесения их в БД.
 
-        Запускается для каждого потока.
-        async_engine создается для каждого потока отдельно и юзается асинхронно.
+        Запускается для каждого процесса.
+        async_engine создается для каждого процесса отдельно.
 
 
-    :param parser:          Required. Принимает классы типа src.fns_modules.fns_parsers.Base_parser.
+    :param parser:          Обязательный параметр. Принимает классы типа src.fns_modules.fns_parsers.Base_parser.
                                 Класс, который выполняет парсинг данных из zip-архива/xml-файла.
-    :param file_dir:        Required. Принимает pathlib.Path | str.
+
+    :param file_dir:        Обязательный параметр. Принимает pathlib.Path | str.
                                 Путь к zip-архиву или xml-файлу.
-    :param left:            Optional. Принимает int.
+
+    :param left:            Необязательный параметр. Принимает int.
                                 Левая граница при парсинге zip-архива, те первый файл.
 
-    :param right:           Optional. Принимает int.
+    :param right:           Необязательный параметр. Принимает int.
                                 Правая граница при парсинге zip-архива, те последний файл.
     :return:
     """
 
-    parser = parser()
+    parser = parser(log_filename=log_filename)
     parsed_data = parser.parse(file_dir=file_dir,
                                left=left,
-                               right=right)
+                               right=right,)
 
     # Для каждого процесса надо создавать отдельный пул соединений.
     async_engine = create_async_engine(url=settings_super_user.DATABASE_URL_ASYNC,
@@ -88,7 +92,8 @@ async def _parse_and_insert(parser: type[Parser_Base],
     semaphore = asyncio.Semaphore(semaphore_count)
 
     # Асинхронные парсинг и вставка данных в БД.
-    print(f'{left = } || {right = }')
+    logging.info(str(file_dir))
+    logging.info(f'{left = } || {right = }')
     l = 0
     r = right - left
     ts = time.perf_counter()
@@ -117,7 +122,6 @@ async def _insert_data(async_engine: AsyncEngine,
         :return:
         """
         if not data['data']:
-            print('No data from file')
             return
         try:
             async with semaphore:
@@ -172,10 +176,10 @@ class Base_FNS_data_updater(ABC):
                                                 Количество создаваемых процессов.
                                                  Не позволит создать больше, чем есть на машине.
         """
-        print(f'\n\n{self.__class__.__name__} is updating data\n')
+        logging.basicConfig(level=logging.WARNING, filename='fns_log.log', filemode='w')
         self._semaphore_count = semaphore_count if semaphore_count > 0 else self.__semaphore_count
         if not (0 < cpu_count <= mp.cpu_count()):
-            warnings.warn('The argument "cpu_count" is set to base value: 1')
+            logging.warning(f'The parameter "cpu_count" is set to base value: {self.__cpu_count_base}')
             self._cpu_count = self.__cpu_count_base
         else:
             self._cpu_count = cpu_count
@@ -223,6 +227,12 @@ class Base_FNS_data_updater(ABC):
 
         :return:
         """
+        print(f'\n\n{self.__class__.__name__} is updating data\n')
+
+        if file_dir is None:
+            logging.error('"file_dir" parameter was given with None value.')
+            return
+
         if isinstance(file_dir, str):
             file_dir = Path(file_dir)
 
@@ -254,7 +264,7 @@ class Base_FNS_data_updater(ABC):
             Возвращает None, если не получилось скачать, иначе возвращает pathlib.Path скачанного zip-архива.
         :return:
         """
-        print('Downloading zip-archive...\n')
+        logging.info('Downloading zip-archive...\n')
         file_dir = self._downloader.download()
         return file_dir
 
@@ -277,8 +287,12 @@ class Base_FNS_data_updater(ABC):
             if right > xml_files_num: right = xml_files_num
             processes.append(mp.Process(
                 target=_run_parse_and_insert,
-                args=(self._parser, file_dir,left, right, self._semaphore_count)
-            ))
+                kwargs={'parser': self._parser,
+                        'file_dir': file_dir,
+                        'left': left,
+                        'right': right,
+                        'semaphore_count': self._semaphore_count,
+                        'log_filename': f'fns_log_process{i}.log', }))
 
         for process in processes:
             process.start()
@@ -391,7 +405,7 @@ class FNS_data_updater_SNO_IP(Base_FNS_data_updater):
     def __init__(self,
                  cpu_count: int = 1,
                  semaphore_count: int = 2, ):
-        self._downloader = Downloader_SNR()
+        self._downloader = Downloader_SNRIP()
         self._parser = Parser_SNO_IP
         super().__init__(cpu_count=cpu_count,
                          semaphore_count=semaphore_count)

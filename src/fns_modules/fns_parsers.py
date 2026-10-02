@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from copy import deepcopy
+import logging
 
 from src.models.other_models import *
 from src.models.database_models import *
 from src.fns_modules.fns_misc import *
-from src.errors.database_errors import TableNotFound
 
 
 class Tag_parser_Base(ABC):
@@ -14,8 +14,9 @@ class Tag_parser_Base(ABC):
     # Обязательно задается внутри класса ДО инициилизации и обязательно должен иметь ниже перечисленные родительские классы.
     _database_model: type[Base_shadow_table, Base, Base_mixin]
 
+
     def handle(self,
-               elements: etree._Element, ) -> Parser_output:
+               elements: etree._Element, ) -> Parser_output | None:
         """
         Парсинг xml-файла, который передается в виде _Element.
         :param elements:
@@ -25,14 +26,16 @@ class Tag_parser_Base(ABC):
         tablename = self._tablename
 
         if tablename is None:
-            raise TableNotFound(self._database_model)
+            logging.warning(f'Could not get "__tablename__" parameter of DB model {self._database_model}.')
+            return None
 
         for element in elements:
             if element.tag == 'Документ':
                 self.org_info = self._org_info
 
                 if self.org_info is None:
-                    raise TableNotFound(self._database_model)
+                    logging.warning(f'Could not get "base_column_values" parameter of DB model {self._database_model}.')
+                    return None
 
                 self._parse_recursive(element=element)
                 element.clear()
@@ -133,21 +136,21 @@ class Tag_parser_ADDITIONAL_OKVEDS(Tag_parser_Base, ):
     _database_model = okveds_shadow
 
     def handle(self,
-               elements: etree._Element, ) -> Parser_output:
+               elements: etree._Element, ) -> Parser_output | None:
         output = []
         tablename = self._tablename
 
         if tablename is None:
-            raise TableNotFound(self._database_model)
+            logging.warning(f'Could not get "__tablename__" parameter of DB model {self._database_model}.')
+            return None
 
         for element in elements:
             if element.tag == 'Документ':
                 self.org_info = self._org_info
-                # print(len(self.org_info['additional_okveds_data']))
 
                 if self.org_info is None:
-                    print('Database model is not found.')
-                    continue
+                    logging.warning(f'Could not get "base_column_values" parameter of DB model {self._database_model}.')
+                    return None
 
                 self._parse_recursive(element=element)
                 element.clear()
@@ -187,19 +190,20 @@ class Tag_parser_LICENSES(Tag_parser_Base, ):
     _database_model = licenses_shadow
 
     def handle(self,
-               elements: etree._Element, ) -> Parser_output:
+               elements: etree._Element, ) -> Parser_output | None:
         output = []
         tablename = self._tablename
 
         if tablename is None:
-            raise TableNotFound(self._database_model)
+            logging.warning(f'Could not get "__tablename__" parameter of DB model {self._database_model}.')
+            return None
         for element in elements:
             if element.tag == 'Документ':
                 self.org_info = self._org_info
 
                 if self.org_info is None:
-                    print('Database model is not found.')
-                    continue
+                    logging.warning(f'Could not get "base_column_values" parameter of DB model {self._database_model}.')
+                    return None
                 self._parse_recursive(element=element)
                 element.clear()
 
@@ -294,7 +298,10 @@ class Parser_Base(ABC):
     tag_parser: Tag_parser_Base
 
     @abstractmethod
-    def __init__(self, ):
+    def __init__(self,
+                 log_filename: str = 'fns_log.log', ):
+        logging.basicConfig(level=logging.WARNING, filename=log_filename, filemode='w')
+
         self.tag_parser = self.tag_parser()
         self.unzipper = Unzipper()
         self.reader = File_reader()
@@ -321,16 +328,19 @@ class Parser_Base(ABC):
             files = self.unzipper.unzip_data(file_dir=file_dir)                         # Массив из одного элемента
         # Если файл имеет неподдерживаемый формат, то возвращает None.
         else:
-            print(f'Unsupported file format "{file_dir}"')
+            logging.warning(f'Unsupported file format "{file_dir}"')
             return None
 
         for file_data in files:
+            if file_data is None:
+                yield None
+                continue
             output = self._parse_xml(file_data=file_data,)
             yield output
 
 
     def _parse_xml(self,
-                   file_data: etree._Element, ) ->  Parser_output:
+                   file_data: etree._Element, ) ->  Parser_output | None:
         output = self.tag_parser.handle(elements=file_data)
         file_data.clear()
         return output
@@ -340,32 +350,37 @@ class Parser_Base(ABC):
 
 class Parser_RSMP_MAIN_INFO(Parser_Base):
     tag_parser = Tag_parser_OGRN_MAIN_INFO
-    def __init__(self, ):
-        super().__init__()
+    def __init__(self,
+                 log_filename: str = 'fns_log.log', ):
+        super().__init__(log_filename=log_filename)
 
 
 class Parser_RSMP_ADDITIONAL_OKVEDS(Parser_Base):
     tag_parser = Tag_parser_ADDITIONAL_OKVEDS
-    def __init__(self, ):
-        super().__init__()
+    def __init__(self,
+                 log_filename: str = 'fns_log.log', ):
+        super().__init__(log_filename=log_filename)
 
 
 class Parser_RSMP_LICENSES(Parser_Base):
     tag_parser = Tag_parser_LICENSES
 
-    def __init__(self, ):
-        super().__init__()
+    def __init__(self,
+                 log_filename: str = 'fns_log.log', ):
+        super().__init__(log_filename=log_filename)
 
 
 class Parser_SNO_UL(Parser_Base):
     tag_parser = Tag_parser_SNO_UL
 
-    def __init__(self, ):
-        super().__init__()
+    def __init__(self,
+                 log_filename: str = 'fns_log.log', ):
+        super().__init__(log_filename=log_filename)
 
 
 class Parser_SNO_IP(Parser_Base):
     tag_parser = Tag_parser_SNO_IP
-    def __init__(self, ):
-        super().__init__()
+    def __init__(self,
+                 log_filename: str = 'fns_log.log', ):
+        super().__init__(log_filename=log_filename)
 
