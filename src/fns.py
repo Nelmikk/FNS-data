@@ -1,6 +1,6 @@
 import asyncio
 import multiprocessing as mp
-import warnings
+import os
 from abc import ABC
 from typing import Final, Generator
 from pathlib import Path
@@ -410,3 +410,33 @@ class FNS_data_updater_SNO_IP(Base_FNS_data_updater):
         super().__init__(cpu_count=cpu_count,
                          semaphore_count=semaphore_count)
 
+
+if __name__ == "__main__":
+    st = time.perf_counter()
+    cpu_count = int(os.getenv('cpu_count'))
+    semaphore_count = int(os.getenv('semaphore_count'))
+
+    updater = FNS_data_updater_RSMP_MAIN_INFO(cpu_count, semaphore_count)
+    file_dir = updater.download()
+    if file_dir is not None:
+        updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True, reset_table=True)
+
+    updater = FNS_data_updater_RSMP_ADDITIONAL_OKVEDS(cpu_count, semaphore_count)
+    if file_dir is not None:
+        updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True, reset_table=True)
+
+    updater = FNS_data_updater_LICENSES(cpu_count, semaphore_count)
+    if file_dir is not None:
+        updater.update_data(file_dir=file_dir, delete_file_after_update=True, rewrite_table=True, reset_table=True)
+
+    updater = FNS_data_updater_SNO(cpu_count, semaphore_count)
+    file_dir = updater.download()
+    if file_dir is not None:
+        updater.update_data(file_dir=file_dir, delete_file_after_update=True, rewrite_table=False, reset_table=True)
+
+    updater = FNS_data_updater_SNO_IP(cpu_count, semaphore_count)
+    file_dir = updater.download()
+    if file_dir is not None:
+        updater.update_data(file_dir=file_dir, delete_file_after_update=True, rewrite_table=True, reset_table=False)
+
+    print('\n---\n', time.perf_counter() - st, ' seconds passed.')
