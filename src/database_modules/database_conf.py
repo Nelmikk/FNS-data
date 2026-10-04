@@ -1,20 +1,21 @@
-from pydantic_settings import BaseSettings
 from sqlalchemy.engine import create_engine
 from sqlalchemy import text
 from dotenv import load_dotenv
-import os
+
+from pydantic_settings import SettingsConfigDict, BaseSettings
 
 load_dotenv()
+
 
 class Settings(BaseSettings):
     """
     Класс для хранения данных для создания Engine-объектов.
     """
-    DB_HOST : str
-    DB_PORT : str
-    DB_NAME : str
-    DB_USER : str
-    DB_PASSWORD : str
+    DB_HOST: str
+    DB_PORT: str
+    DB_NAME: str
+    DB_USER: str
+    DB_PASSWORD: str
 
     @property
     def DATABASE_URL_ASYNC(self, ) -> str:
@@ -24,18 +25,17 @@ class Settings(BaseSettings):
     def DATABASE_URL(self, ) -> str:
         return f'postgresql+psycopg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}'
 
+class SettingsSuperUser(Settings):
+    model_config = SettingsConfigDict(env_file='.env',  env_prefix='SUPER_USER_')
 
-settings_super_user = Settings(DB_HOST=os.getenv('DB_HOST_SUPER_USER'),
-                               DB_PORT=os.getenv('DB_PORT_SUPER_USER'),
-                               DB_USER=os.getenv('DB_USER_SUPER_USER'),
-                               DB_PASSWORD=os.getenv('DB_PASSWORD_SUPER_USER'),
-                               DB_NAME=os.getenv('DB_NAME_SUPER_USER'))
 
-settings_select_user = Settings(DB_HOST=os.getenv('DB_HOST_SELECT_USER'),
-                                DB_PORT=os.getenv('DB_PORT_SELECT_USER'),
-                                DB_USER=os.getenv('DB_USER_SELECT_USER'),
-                                DB_PASSWORD=os.getenv('DB_PASSWORD_SELECT_USER'),
-                                DB_NAME=os.getenv('DB_NAME_SELECT_USER'))
+class SettingsSelectUser(Settings):
+    model_config = SettingsConfigDict(env_file='.env', env_prefix='SELECT_USER_')
+
+
+settings_super_user = SettingsSuperUser()
+settings_select_user = SettingsSelectUser()
+
 
 
 def create_readonly_user():

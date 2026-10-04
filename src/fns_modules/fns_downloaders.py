@@ -8,13 +8,14 @@ from src.errors.downloader_errors import DownloadError, CanNotCreateDirectory
 from src.fns_modules.fns_misc import retry
 
 
-class Downloader_Base:
+class DownloaderBase:
     download_dir: Path = Path(fr'{Path.cwd()}\downloaded_dir')
     _page_url = None
 
     _file_name = 'downloaded_file.zip'
     def __init__(self, log_filename: str = 'fns_log.log', ):
-        logging.basicConfig(level=logging.INFO, filename=log_filename, filemode='w')
+        logging.basicConfig(level=logging.INFO, filename=log_filename,
+                            filemode='w', format='%(asctime)s %(levelname)s %(message)s')
 
 
 
@@ -123,7 +124,7 @@ class Downloader_Base:
         :return:
         """
         if self._page_url is None:
-            logging.critical('Page content was changed, downloader must be updated.  - {self.__class__.__name__}')
+            logging.critical(f'Page content was changed, downloader must be updated.  - {self.__class__.__name__}')
             return None
         if not self._check_download_dir():
             return None
@@ -133,19 +134,19 @@ class Downloader_Base:
 
 
 
-class Downloader_RSMP(Downloader_Base):
+class DownloaderRSMP(DownloaderBase):
     def __init__(self, ):
         self._page_url = 'https://www.nalog.gov.ru/opendata/7707329152-rsmp/'
         super().__init__()
 
-class Downloader_SNR(Downloader_Base):
+class DownloaderSNRUL(DownloaderBase):
     def __init__(self, ):
         self._page_url = 'https://www.nalog.gov.ru/opendata/7707329152-snr/'
         super().__init__()
 
-class Downloader_SNRIP(Downloader_Base):
+class DownloaderSNRIP(DownloaderBase):
     def __init__(self, ):
         self._page_url = 'https://www.nalog.gov.ru/opendata/7707329152-snrip/'
         super().__init__()
 
-__all__ = ['Downloader_RSMP', 'Downloader_SNRIP', 'Downloader_SNR', 'Downloader_Base']
+__all__ = ['DownloaderRSMP', 'DownloaderSNRIP', 'DownloaderSNRUL', 'DownloaderBase']

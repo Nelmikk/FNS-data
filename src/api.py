@@ -1,6 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 from src.models.api_models import *
+from src.api_modules.api_conf import app_settings
 
 from src.api_modules.api_endpoints import *
 
@@ -68,4 +69,4 @@ async def get_full_organisation_data(value: str, ) -> list[full_data | None] | s
 
 
 if __name__ == '__main__':
-    uvicorn.run('api:app', reload=True)
+    uvicorn.run(**app_settings.model_dump())

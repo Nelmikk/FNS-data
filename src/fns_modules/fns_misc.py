@@ -43,7 +43,7 @@ class Unzipper:
 
 
 
-class File_reader:
+class FileReader:
     def get_file_root(self,
                       file_dir: str | Path, ) -> etree._Element:
         """
@@ -56,6 +56,11 @@ class File_reader:
 
 
 def retry(retry_nums: int = 1, ):
+    """
+    Декоратор для повторных попыток функций/методов, которые возвращают False при неудаче.
+    retry_nums: int - количество попыток
+    """
+    retry_nums = retry_nums if retry_nums > 0 else 1
     def f(func, ):
         @wraps(func)
         def wrapper(*args, **kwargs, ):

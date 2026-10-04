@@ -1,0 +1,14 @@
+FROM fns_data_base_image:latest
+
+RUN mkdir -p /app/src/
+WORKDIR /app/src/
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY src/api_modules/ /app/src/api_modules
+COPY src/api.py /app/src/api.py
+
+EXPOSE 8000
+
+CMD ["python", "-m", "api"]

@@ -17,9 +17,10 @@ from src.database_modules.database_conf import settings_super_user
 
 from src.models.other_models import Parser_output
 
-from src.fns_modules.fns_downloaders import Downloader_Base, Downloader_SNRIP
-from src.fns_modules.fns_parsers import Parser_Base, Parser_SNO_UL, Parser_SNO_IP, Parser_RSMP_MAIN_INFO, Parser_RSMP_ADDITIONAL_OKVEDS, Parser_RSMP_LICENSES
-from src.fns_modules.fns_downloaders import Downloader_RSMP, Downloader_SNR
+from src.fns_modules.fns_config import fns_settings
+from src.fns_modules.fns_downloaders import DownloaderBase, DownloaderSNRIP
+from src.fns_modules.fns_parsers import ParserBase, ParserSNOUL, ParserSNOIP, ParserMainInfo, ParserAdditionalOkveds, ParserLicenses
+from src.fns_modules.fns_downloaders import DownloaderRSMP, DownloaderSNRUL
 
 mp.set_start_method('spawn', force=True)
 
@@ -51,7 +52,7 @@ def _run_parse_and_insert(*args,
     asyncio.run(_parse_and_insert(*args, **kwargs))
 
 
-async def _parse_and_insert(parser: type[Parser_Base],
+async def _parse_and_insert(parser: type[ParserBase],
                             file_dir: str | Path,
                             log_filename: str,
                             left: int = 0,
@@ -130,7 +131,7 @@ async def _insert_data(async_engine: AsyncEngine,
             semaphore.release()
 
 
-class Base_FNS_data_updater(ABC):
+class BaseFNSDataUpdater(ABC):
     """
     Класс для скачивания, парсинга и занесения в БД всех спаршенных данных.
         1. Класс наследуется и от наследника создается экземпляр.
@@ -141,15 +142,15 @@ class Base_FNS_data_updater(ABC):
     # Базовое значение кол-ва процессов
     __cpu_count_base: Final = 1
     # Базовоное значение кол-ва активных корутин
-    __semaphore_count: Final = 2
+    __semaphore_count_base: Final = 2
 
     # Класс для скачивания документов, в __init__ создается экземпляр.
     #   Не задается и не изменяется после инициилизации.
-    _downloader: Downloader_Base
+    _downloader: DownloaderBase
 
     # Класс для парсинга данных, экземпляры создаются отдельно для каждого процесса.
     #   Не задается и не изменяется после инициилизации.
-    _parser: type[Parser_Base]
+    _parser: type[ParserBase]
 
     # Количество процессов для парсинга и занесения в БД.
     #   Задается во время инициилизации.
@@ -162,7 +163,7 @@ class Base_FNS_data_updater(ABC):
 
     def __init__(self,
                  cpu_count: int = 1,
-                 semaphore_count: int = 2,):
+                 semaphore_count: int = 2, ):
         """
         Инициализация экземпляра, проверка на допустимость количества процессов.
 
@@ -176,8 +177,9 @@ class Base_FNS_data_updater(ABC):
                                                 Количество создаваемых процессов.
                                                  Не позволит создать больше, чем есть на машине.
         """
-        logging.basicConfig(level=logging.WARNING, filename='fns_log.log', filemode='w')
-        self._semaphore_count = semaphore_count if semaphore_count > 0 else self.__semaphore_count
+        logging.basicConfig(level=logging.WARNING, filename='fns_log.log',
+                            filemode='w', format='%(asctime)s %(levelname)s %(message)s')
+        self._semaphore_count = semaphore_count if semaphore_count > 0 else self.__semaphore_count_base
         if not (0 < cpu_count <= mp.cpu_count()):
             logging.warning(f'The parameter "cpu_count" is set to base value: {self.__cpu_count_base}')
             self._cpu_count = self.__cpu_count_base
@@ -341,7 +343,7 @@ def _xml_files_num(zip_file_dir: Path, ) -> int:
     return xml_files_num
 
 
-class FNS_data_updater_RSMP_MAIN_INFO(Base_FNS_data_updater):
+class UpdaterMainInfo(BaseFNSDataUpdater):
     """
     Дочерний класс Base_FNS_data_updater.
         Изменены параметры парсера и скачивающего класса, логика работы та же.
@@ -349,14 +351,14 @@ class FNS_data_updater_RSMP_MAIN_INFO(Base_FNS_data_updater):
     def __init__(self,
                  cpu_count: int = 1,
                  semaphore_count: int = 2,):
-        self._downloader = Downloader_RSMP()
-        self._parser = Parser_RSMP_MAIN_INFO
+        self._downloader = DownloaderRSMP()
+        self._parser = ParserMainInfo
         super().__init__(cpu_count=cpu_count,
                          semaphore_count=semaphore_count)
 
 
 
-class FNS_data_updater_RSMP_ADDITIONAL_OKVEDS(Base_FNS_data_updater):
+class UpdaterAdditionalOkveds(BaseFNSDataUpdater):
     """
     Дочерний класс Base_FNS_data_updater.
         Изменены параметры парсера и скачивающего класса, логика работы та же.
@@ -364,25 +366,25 @@ class FNS_data_updater_RSMP_ADDITIONAL_OKVEDS(Base_FNS_data_updater):
     def __init__(self,
                  cpu_count: int = 1,
                  semaphore_count: int = 2, ):
-        self._downloader = Downloader_RSMP()
-        self._parser = Parser_RSMP_ADDITIONAL_OKVEDS
+        self._downloader = DownloaderRSMP()
+        self._parser = ParserAdditionalOkveds
         super().__init__(cpu_count=cpu_count,
                          semaphore_count=semaphore_count)
 
 
-class FNS_data_updater_LICENSES(Base_FNS_data_updater):
+class UpdaterLicenses(BaseFNSDataUpdater):
     """
     Дочерний класс Base_FNS_data_updater.
         Изменены параметры парсера и скачивающего класса, логика работы та же.
     """
     def __init__(self, cpu_count: int = 1,
                  semaphore_count: int = 2,):
-        self._downloader = Downloader_RSMP()
-        self._parser = Parser_RSMP_LICENSES
+        self._downloader = DownloaderRSMP()
+        self._parser = ParserLicenses
         super().__init__(cpu_count=cpu_count,
                          semaphore_count=semaphore_count)
 
-class FNS_data_updater_SNO(Base_FNS_data_updater):
+class UpdaterSNOUL(BaseFNSDataUpdater):
     """
     Дочерний класс Base_FNS_data_updater.
         Изменены параметры парсера и скачивающего класса, логика работы та же.
@@ -390,14 +392,14 @@ class FNS_data_updater_SNO(Base_FNS_data_updater):
     def __init__(self,
                  cpu_count: int = 1,
                  semaphore_count: int = 2,):
-        self._downloader = Downloader_SNR()
-        self._parser = Parser_SNO_UL
+        self._downloader = DownloaderSNRUL()
+        self._parser = ParserSNOUL
         super().__init__(cpu_count=cpu_count,
                          semaphore_count=semaphore_count)
 
 
 
-class FNS_data_updater_SNO_IP(Base_FNS_data_updater):
+class UpdaterSNOIP(BaseFNSDataUpdater):
     """
     Дочерний класс Base_FNS_data_updater.
         Изменены параметры парсера и скачивающего класса, логика работы та же.
@@ -405,36 +407,34 @@ class FNS_data_updater_SNO_IP(Base_FNS_data_updater):
     def __init__(self,
                  cpu_count: int = 1,
                  semaphore_count: int = 2, ):
-        self._downloader = Downloader_SNRIP()
-        self._parser = Parser_SNO_IP
+        self._downloader = DownloaderSNRIP()
+        self._parser = ParserSNOIP
         super().__init__(cpu_count=cpu_count,
                          semaphore_count=semaphore_count)
 
 
 if __name__ == "__main__":
     st = time.perf_counter()
-    cpu_count = int(os.getenv('cpu_count'))
-    semaphore_count = int(os.getenv('semaphore_count'))
 
-    updater = FNS_data_updater_RSMP_MAIN_INFO(cpu_count, semaphore_count)
+    updater = UpdaterMainInfo(**fns_settings.model_dump())
     file_dir = updater.download()
     if file_dir is not None:
         updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True, reset_table=True)
 
-    updater = FNS_data_updater_RSMP_ADDITIONAL_OKVEDS(cpu_count, semaphore_count)
+    updater = UpdaterAdditionalOkveds(**fns_settings.model_dump())
     if file_dir is not None:
         updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True, reset_table=True)
 
-    updater = FNS_data_updater_LICENSES(cpu_count, semaphore_count)
+    updater = UpdaterLicenses(**fns_settings.model_dump())
     if file_dir is not None:
         updater.update_data(file_dir=file_dir, delete_file_after_update=True, rewrite_table=True, reset_table=True)
 
-    updater = FNS_data_updater_SNO(cpu_count, semaphore_count)
+    updater = UpdaterSNOUL(**fns_settings.model_dump())
     file_dir = updater.download()
     if file_dir is not None:
         updater.update_data(file_dir=file_dir, delete_file_after_update=True, rewrite_table=False, reset_table=True)
 
-    updater = FNS_data_updater_SNO_IP(cpu_count, semaphore_count)
+    updater = UpdaterSNOIP(**fns_settings.model_dump())
     file_dir = updater.download()
     if file_dir is not None:
         updater.update_data(file_dir=file_dir, delete_file_after_update=True, rewrite_table=True, reset_table=False)

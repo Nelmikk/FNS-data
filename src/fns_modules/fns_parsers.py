@@ -7,7 +7,7 @@ from src.models.database_models import *
 from src.fns_modules.fns_misc import *
 
 
-class Tag_parser_Base(ABC):
+class TagParserBase(ABC):
     """
     Base-класс для наследования парсеров xml-файлов.
     """
@@ -75,7 +75,7 @@ class Tag_parser_Base(ABC):
 
 
 
-class Tag_parser_OGRN_MAIN_INFO(Tag_parser_Base):
+class TagParserMainInfo(TagParserBase):
     _database_model = fns_main_info_shadow
 
     def _parse_recursive(self,
@@ -132,7 +132,7 @@ class Tag_parser_OGRN_MAIN_INFO(Tag_parser_Base):
 
 
 
-class Tag_parser_ADDITIONAL_OKVEDS(Tag_parser_Base, ):
+class TagParserAdditionalOkveds(TagParserBase, ):
     _database_model = okveds_shadow
 
     def handle(self,
@@ -186,7 +186,7 @@ class Tag_parser_ADDITIONAL_OKVEDS(Tag_parser_Base, ):
 
 
 
-class Tag_parser_LICENSES(Tag_parser_Base, ):
+class TagParserLicenses(TagParserBase, ):
     _database_model = licenses_shadow
 
     def handle(self,
@@ -238,7 +238,7 @@ class Tag_parser_LICENSES(Tag_parser_Base, ):
             })
 
 
-class Tag_parser_SNO_UL(Tag_parser_Base):
+class TagParserSNOUL(TagParserBase):
     _database_model = sno_shadow
 
     def _parse_recursive(self,
@@ -259,7 +259,7 @@ class Tag_parser_SNO_UL(Tag_parser_Base):
             self.org_info['srp'] = True if element.get('ПризнСРП') == '1' else False
 
 
-class Tag_parser_SNO_IP(Tag_parser_Base):
+class TagParserSNOIP(TagParserBase):
     _database_model = sno_shadow
 
     def _parse_recursive(self,
@@ -286,25 +286,26 @@ class Tag_parser_SNO_IP(Tag_parser_Base):
 
 
 
-class Parser_Base(ABC):
+class ParserBase(ABC):
     """
     Base-класс для парсеров xml-файлов.
     """
     # Базовый у всех, задавать в классах-наследниках не надо.
     unzipper: Unzipper
     # Базовый у всех, задавать в классах-наследниках не надо.
-    reader: File_reader
+    reader: FileReader
     # Обязательно задается у каждого отдельного класса-наследника.
-    tag_parser: Tag_parser_Base
+    tag_parser: TagParserBase
 
     @abstractmethod
     def __init__(self,
                  log_filename: str = 'fns_log.log', ):
-        logging.basicConfig(level=logging.WARNING, filename=log_filename, filemode='w')
+        logging.basicConfig(level=logging.WARNING, filename=log_filename,
+                            filemode='w', format='%(asctime)s %(levelname)s %(message)s')
 
         self.tag_parser = self.tag_parser()
         self.unzipper = Unzipper()
-        self.reader = File_reader()
+        self.reader = FileReader()
 
     def parse(self,
               file_dir: str | Path,
@@ -348,38 +349,38 @@ class Parser_Base(ABC):
 
 
 
-class Parser_RSMP_MAIN_INFO(Parser_Base):
-    tag_parser = Tag_parser_OGRN_MAIN_INFO
+class ParserMainInfo(ParserBase):
+    tag_parser = TagParserMainInfo
     def __init__(self,
                  log_filename: str = 'fns_log.log', ):
         super().__init__(log_filename=log_filename)
 
 
-class Parser_RSMP_ADDITIONAL_OKVEDS(Parser_Base):
-    tag_parser = Tag_parser_ADDITIONAL_OKVEDS
+class ParserAdditionalOkveds(ParserBase):
+    tag_parser = TagParserAdditionalOkveds
     def __init__(self,
                  log_filename: str = 'fns_log.log', ):
         super().__init__(log_filename=log_filename)
 
 
-class Parser_RSMP_LICENSES(Parser_Base):
-    tag_parser = Tag_parser_LICENSES
-
-    def __init__(self,
-                 log_filename: str = 'fns_log.log', ):
-        super().__init__(log_filename=log_filename)
-
-
-class Parser_SNO_UL(Parser_Base):
-    tag_parser = Tag_parser_SNO_UL
+class ParserLicenses(ParserBase):
+    tag_parser = TagParserLicenses
 
     def __init__(self,
                  log_filename: str = 'fns_log.log', ):
         super().__init__(log_filename=log_filename)
 
 
-class Parser_SNO_IP(Parser_Base):
-    tag_parser = Tag_parser_SNO_IP
+class ParserSNOUL(ParserBase):
+    tag_parser = TagParserSNOUL
+
+    def __init__(self,
+                 log_filename: str = 'fns_log.log', ):
+        super().__init__(log_filename=log_filename)
+
+
+class ParserSNOIP(ParserBase):
+    tag_parser = TagParserSNOIP
     def __init__(self,
                  log_filename: str = 'fns_log.log', ):
         super().__init__(log_filename=log_filename)
