@@ -1,7 +1,6 @@
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from src.database_modules.database_sessions import async_engine_select_user
 from src.database_modules.select_queries.misc import *
 from src.models.database_models import *
 
@@ -186,92 +185,92 @@ def __select_full_data_ul_query(search_type: str,
 
 
 
-async def select_fns_main_info_by_inn_async(inn: str,
-                                            engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+async def select_fns_main_info_by_inn_async(engine: AsyncEngine,
+                                            inn: str, ) -> AsyncGenerator:
     async with engine.connect() as connection:
         results = await connection.execute(**__select_fns_main_info_query(search_type='inn', value=inn))
     return fetch_result(results)
 
 
-async def select_fns_main_info_by_ogrn_async(ogrn: str,
-                                             engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+async def select_fns_main_info_by_ogrn_async(engine: AsyncEngine,
+                                             ogrn: str, ) -> AsyncGenerator:
     async with engine.connect() as connection:
         results = await connection.execute(**__select_fns_main_info_query(search_type='ogrn', value=ogrn))
     return fetch_result(results)
 
 
-async def select_additional_okveds_by_inn_async(inn: str,
-                                                engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+async def select_additional_okveds_by_inn_async(engine: AsyncEngine,
+                                                inn: str, ) -> AsyncGenerator:
     async with engine.connect() as connection:
         results = await connection.execute(**__select_additional_ovkeds_query(search_type='inn', value=inn))
     return fetch_result(results)
 
 
-async def select_additional_okveds_by_ogrn_async(ogrn: str,
-                                                 engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+async def select_additional_okveds_by_ogrn_async(engine: AsyncEngine,
+                                                 ogrn: str, ) -> AsyncGenerator:
     async with engine.connect() as connection:
         results = await connection.execute(**__select_additional_ovkeds_query(search_type='ogrn', value=ogrn))
     return fetch_result(results)
 
 
-async def select_licenses_by_inn_async(inn: str,
-                                       engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+async def select_licenses_by_inn_async(engine: AsyncEngine,
+                                       inn: str, ) -> AsyncGenerator:
     async with engine.connect() as connection:
         results = await connection.execute(**__select_licenses_query(search_type='inn', value=inn))
     return fetch_result(results)
 
 
-async def select_licenses_by_ogrn_async(ogrn: str,
-                                        engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+async def select_licenses_by_ogrn_async(engine: AsyncEngine,
+                                        ogrn: str, ) -> AsyncGenerator:
     async with engine.connect() as connection:
         results = await connection.execute(**__select_licenses_query(search_type='ogrn', value=ogrn))
     return fetch_result(results)
 
 
-async def select_sno_ip_by_inn_async(inn: str,
-                                     engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+async def select_sno_ip_by_inn_async(engine: AsyncEngine,
+                                     inn: str, ) -> AsyncGenerator:
     async with engine.connect() as connection:
         results = await connection.execute(**__select_sno_ip_query(search_type='inn', value=inn))
     return fetch_result(results)
 
 
-async def select_sno_ip_by_ogrn_async(ogrn: str,
-                                      engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+async def select_sno_ip_by_ogrn_async(engine: AsyncEngine,
+                                      ogrn: str, ) -> AsyncGenerator:
     async with engine.connect() as connection:
         results = await connection.execute(**__select_sno_ip_query(search_type='ogrn', value=ogrn))
     return fetch_result(results)
 
 
-async def select_sno_ul_by_inn_async(inn: str,
-                                     engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+async def select_sno_ul_by_inn_async(engine: AsyncEngine,
+                                     inn: str, ) -> AsyncGenerator:
     async with engine.connect() as connection:
         results = await connection.execute(**__select_sno_ul_query(search_type='inn', value=inn))
     return fetch_result(results)
 
 
-async def select_sno_ul_by_ogrn_async(ogrn: str,
-                                      engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+async def select_sno_ul_by_ogrn_async(engine: AsyncEngine,
+                                      ogrn: str, ) -> AsyncGenerator:
     async with engine.connect() as connection:
         results = await connection.execute(**__select_sno_ul_query(search_type='ogrn', value=ogrn))
     return fetch_result(results)
 
 
-async def select_full_data_ip_by_inn_async(inn: str,
-                                           engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+async def select_full_data_ip_by_inn_async(engine: AsyncEngine,
+                                           inn: str, ) -> AsyncGenerator:
     async with engine.connect() as connection:
         results = await connection.execute(**__select_full_data_ip_query(search_type='inn', value=inn))
     return fetch_result(results)
 
 
-async def select_full_data_ip_by_ogrn_async(ogrn: str,
-                                            engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+async def select_full_data_ip_by_ogrn_async(engine: AsyncEngine,
+                                            ogrn: str,) -> AsyncGenerator:
     async with engine.connect() as connection:
         results = await connection.execute(**__select_full_data_ip_query(search_type='ogrn', value=ogrn))
     return fetch_result(results)
 
 
-async def select_full_data_ul_by_inn_async(inn: str,
-                                           engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+async def select_full_data_ul_by_inn_async(engine: AsyncEngine,
+                                           inn: str, ) -> AsyncGenerator:
     # Конкретно здесь используется генерация запроса как для ИП, тк ОГРН ЮЛ у таблицы с СНО отсутствует
     # и для него нужен отличный запрос.
     async with engine.connect() as connection:
@@ -279,8 +278,8 @@ async def select_full_data_ul_by_inn_async(inn: str,
     return fetch_result(results)
 
 
-async def select_full_data_ul_by_ogrn_async(ogrn: str,
-                                            engine: AsyncEngine = async_engine_select_user, ) -> AsyncGenerator:
+async def select_full_data_ul_by_ogrn_async(engine: AsyncEngine,
+                                            ogrn: str, ) -> AsyncGenerator:
     async with engine.connect() as connection:
         results = await connection.execute(**__select_full_data_ul_query(search_type='ogrn', value=ogrn))
     return fetch_result(results)

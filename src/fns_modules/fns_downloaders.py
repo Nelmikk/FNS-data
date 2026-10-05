@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 import re
 import logging
 
-from src.errors.downloader_errors import DownloadError, CanNotCreateDirectory
+from src.errors.downloader_errors import CanNotCreateDirectory
 from src.fns_modules.fns_misc import retry
 
 
@@ -103,7 +103,7 @@ class DownloaderBase:
 
         return file_url
 
-    @retry(retry_nums=3)
+    @retry(attempts=3)
     def _download(self, ) -> bool:
         file_url = self._file_url
         response = requests.get(url=file_url, stream=True)

@@ -4,12 +4,11 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
 
 from src.models.database_models import Base
-from src.database_modules.database_sessions import async_engine, sync_engine, sync_session
 
 
 async def replace_tables_async(old_table_name: str,
                                new_table_name: str,
-                               engine: AsyncEngine = async_engine, ):
+                               engine: AsyncEngine, ):
     """
     Заменяет старую таблицу новой.
     :param old_table_name:
@@ -30,7 +29,7 @@ async def replace_tables_async(old_table_name: str,
 
 def rename_tables(old_tablename: str,
                   new_tablename: str,
-                  engine: Engine = sync_engine, ):
+                  engine: Engine, ):
     """
     Меняет местами названя старой и новой таблиц.
     :param old_tablename:
@@ -52,7 +51,7 @@ def rename_tables(old_tablename: str,
 
 
 def drop_temp_table(tablename: str,
-                    engine: Engine = sync_engine, ):
+                    engine: Engine, ):
     """
     Удаление временной таблицы, если она осталась после ошибки в предыдущих циклах обновления данных.
     :param tablename:
@@ -69,7 +68,7 @@ def drop_temp_table(tablename: str,
 def create_index(index_name: str,
                  column_index: str,
                  table: type[Base],
-                 engine: Engine = sync_engine,
+                 engine: Engine,
                  index_type: str = 'btree'):
     """
     Удаляет индекс, если он существует и создает его.
@@ -94,7 +93,7 @@ def create_index(index_name: str,
 
 def rename_index(old_index_name: str,
                  new_index_name: str,
-                 engine: Engine = sync_engine, ):
+                 engine: Engine, ):
     """
     Изменение названия индекса.
     :param old_index_name:
@@ -110,8 +109,8 @@ def rename_index(old_index_name: str,
 
 
 
-def create_tables_from_models(tables_models: list[type[Base, ]] | None = None,
-                             session: sessionmaker = sync_session, ):
+def create_tables_from_models(session: sessionmaker,
+                              tables_models: list[type[Base, ]] | None = None, ):
     """
     Создание таблиц из описанных моделей.
     :param tables_models:   Если == None, то будут созданы все описанные таблицы.
@@ -124,8 +123,8 @@ def create_tables_from_models(tables_models: list[type[Base, ]] | None = None,
         Base.metadata.create_all(bind=connection, tables=tables_models)
         connection.commit()
 
-def drop_tables_from_models(tables_models: list[type[Base, ]] | None = None,
-                            session: sessionmaker = sync_session, ):
+def drop_tables_from_models(session: sessionmaker,
+                            tables_models: list[type[Base, ]] | None = None, ):
     """
     Удаление таблиц из описанных моделей.
     :param tables_models:   Если == None, то будут удалены все описанные таблицы.

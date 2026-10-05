@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from copy import deepcopy
 import logging
+from typing import Generator
 
 from src.models.other_models import *
 from src.models.database_models import *
@@ -293,7 +294,7 @@ class ParserBase(ABC):
     # Базовый у всех, задавать в классах-наследниках не надо.
     unzipper: Unzipper
     # Базовый у всех, задавать в классах-наследниках не надо.
-    reader: FileReader
+    # reader: FileReader
     # Обязательно задается у каждого отдельного класса-наследника.
     tag_parser: TagParserBase
 
@@ -305,12 +306,12 @@ class ParserBase(ABC):
 
         self.tag_parser = self.tag_parser()
         self.unzipper = Unzipper()
-        self.reader = FileReader()
+        # self.reader = FileReader()
 
-    def parse(self,
+    async def parse(self,
               file_dir: str | Path,
               left: int = 0,
-              right: int = 0, ) -> Generator:
+              right: int = 0, ) -> AsyncGenerator:
         """
         Парсинг xml-файла или xml-файлов в заданных переменными left и right границах zip-архив.
             Возвращается генератор спаршенных данных.
@@ -330,7 +331,7 @@ class ParserBase(ABC):
         # Если файл имеет неподдерживаемый формат, то возвращает None.
         else:
             logging.warning(f'Unsupported file format "{file_dir}"')
-            return None
+            yield None
 
         for file_data in files:
             if file_data is None:

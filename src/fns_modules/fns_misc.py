@@ -1,16 +1,17 @@
 from functools import wraps
 from pathlib import Path
-from typing import Generator
+from typing import AsyncGenerator, Generator
 from zipfile import ZipFile
 from lxml import etree
 import logging
+from inspect import iscoroutinefunction
 
 
 class Unzipper:
     def unzip_data(self,
                    file_dir: str | Path,
                    left: int = 0,
-                   right: int = 0, ):
+                   right: int = 0, ) -> Generator:
         """
         Генератор данных из файлов, находящихся в zip-архиве.
 
@@ -36,43 +37,67 @@ class Unzipper:
                     for file in files:
                         yield etree.fromstring(zf.open(file).read())
             except Exception as e:
-                logging.error('Error reading zip-file. Zip-file could be corrupted.')
+                logging.error(f'Error reading zip-file. Zip-file could be corrupted. {file_dir}')
                 yield None
         else:
-            yield etree.parse(file_dir).getroot()
+            try:
+                yield etree.parse(file_dir).getroot()
+            except:
+                logging.error(f'Error parsing xml-file. Xml-file could be corrupted. {file_dir}')
+                yield None
 
 
 
 class FileReader:
     def get_file_root(self,
-                      file_dir: str | Path, ) -> etree._Element:
+                      file_dir: str | Path, ) -> etree._Element | None:
         """
         Возвращает объект типа _Element для парсинга.
         :param file_dir:
         :return:
         """
-        root = etree.parse(file_dir).getroot()
-        return root
+        try:
+            root = etree.parse(file_dir).getroot()
+            return root
+        except:
+            logging.error(f'Error parsing xml-file. Xml-file could be corrupted. {file_dir}')
+            return None
 
 
-def retry(retry_nums: int = 1, ):
+
+def retry(attempts: int = 1, ):
     """
     Декоратор для повторных попыток функций/методов, которые возвращают False при неудаче.
-    retry_nums: int - количество попыток
+    attempts: int - количество попыток
     """
-    retry_nums = retry_nums if retry_nums > 0 else 1
+    attempts = attempts if attempts > 0 else 1
     def f(func, ):
         @wraps(func)
-        def wrapper(*args, **kwargs, ):
-            retry_num = 0
-            while True:
-                retry_num += 1
+        def sync_wrapper(*args, **kwargs, ):
 
-                if retry_num > retry_nums:
+            for attempt_num in range(attempts):
+
+                if attempt_num > attempts:
                     return False
-                print(f'\n{retry_num} attempt ...')
-                logging.info(f'{retry_num} attempt ...')
+
+                print(f'\n{attempt_num} attempt ...')
+                logging.info(f'{attempt_num} attempt ...')
                 if func(*args, **kwargs) is True:
                     return True
-        return wrapper
+
+        @wraps(func)
+        def async_wrapper(*args, **kwargs, ):
+            for attempt_num in range(attempts):
+
+                if attempt_num > attempts:
+                    return False
+
+                print(f'\n{attempt_num} attempt ...')
+                logging.info(f'{attempt_num} attempt ...')
+                if func(*args, **kwargs) is True:
+                    return True
+
+        if iscoroutinefunction(func):
+            return async_wrapper
+        return sync_wrapper
     return f

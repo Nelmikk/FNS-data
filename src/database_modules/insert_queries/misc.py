@@ -12,7 +12,6 @@ def batch_data(batch_size: int = 16_000, ):
     def batch(func: Callable, ):
         @wraps(func)
         async def async_wrapper(*args, **kwargs, ):
-            nonlocal batch_size
             rows_num = len(kwargs['values'])
             step = int(batch_size / (len(kwargs['values'][0])))  # Оптимизация батчей
 
@@ -31,7 +30,6 @@ def batch_data(batch_size: int = 16_000, ):
 
         @wraps(func)
         def sync_wrapper(*args, **kwargs, ):
-            nonlocal batch_size
             rows_num = len(kwargs['values'])
             step = int(batch_size / (len(kwargs['values'][0])))  # Оптимизация батчей
 

@@ -1,15 +1,15 @@
 import asyncio
 import multiprocessing as mp
-import os
 from abc import ABC
-from typing import Final, Generator
+from typing import Final
 from pathlib import Path
 from zipfile import ZipFile
 import time
 import logging
 
-from sqlalchemy.ext.asyncio import create_async_engine
-
+from src.database_modules.database_sessions import (get_async_engine_super_user,
+                                                    get_sync_engine_super_user,
+                                                    get_sessionmaker)
 from src.database_modules.insert_queries.queries import *
 from src.database_modules.metadata_queries.queries import  *
 
@@ -24,22 +24,6 @@ from src.fns_modules.fns_downloaders import DownloaderRSMP, DownloaderSNRUL
 
 mp.set_start_method('spawn', force=True)
 
-
-async def async_generator_wrapper(sync_generator: Generator, ):
-    """
-    Преобразует синхронный генератор в асинхронный.
-    :param sync_generator:
-    :return:
-    """
-    def get_next(generator: Generator):
-        try:
-            return next(generator)
-        except:
-            return None
-    while True:
-        item = await asyncio.to_thread(get_next, sync_generator)
-        if item is None: break
-        yield item
 
 def _run_parse_and_insert(*args,
                           **kwargs, ):
@@ -85,31 +69,33 @@ async def _parse_and_insert(parser: type[ParserBase],
                                right=right,)
 
     # Для каждого процесса надо создавать отдельный пул соединений.
-    async_engine = create_async_engine(url=settings_super_user.DATABASE_URL_ASYNC,
-                                       echo=False,
-                                       pool_size=semaphore_count,
-                                       pool_pre_ping=True)
+    async_engine = get_async_engine_super_user(url=settings_super_user.DATABASE_URL_ASYNC,
+                                               echo=False,
+                                               pool_size=semaphore_count,
+                                               pool_pre_ping=True)
     # Семафор для ограничения создания огромного количества соединений.
     semaphore = asyncio.Semaphore(semaphore_count)
-
-    # Асинхронные парсинг и вставка данных в БД.
-    logging.info(str(file_dir))
-    logging.info(f'{left = } || {right = }')
-    l = 0
-    r = right - left
-    ts = time.perf_counter()
-    async with asyncio.TaskGroup() as tg:
-        async for org_data in async_generator_wrapper(parsed_data):
-            if org_data is None:
-                continue
-            await semaphore.acquire()
-            tg.create_task(_insert_data(async_engine=async_engine,
-                                        data=org_data,
-                                        semaphore=semaphore))
-            l += 1
-            print(f'\r{time.perf_counter()-ts} || {l}/{r}', end='', flush=True)
-    # Закрытие пула соединений.
-    await async_engine.dispose()
+    try:
+        # Асинхронные парсинг и вставка данных в БД.
+        logging.info(f'\n{left = } || {right = }')
+        l = 0
+        r = right - left
+        ts = time.perf_counter()
+        async with asyncio.TaskGroup() as tg:
+            async for org_data in parsed_data:
+                if org_data is None:
+                    continue
+                if not org_data['data']:
+                    continue
+                await semaphore.acquire()
+                tg.create_task(_insert_data(async_engine=async_engine,
+                                            data=org_data,
+                                            semaphore=semaphore))
+                l += 1
+                print(f'\r{time.perf_counter()-ts} || {l}/{r}', end='', flush=True)
+        # Закрытие пула соединений.
+    finally:
+        await async_engine.dispose()
 
 
 async def _insert_data(async_engine: AsyncEngine,
@@ -122,11 +108,8 @@ async def _insert_data(async_engine: AsyncEngine,
         :param data:
         :return:
         """
-        if not data['data']:
-            return
         try:
-            async with semaphore:
-                await insert_data_async(tablename=data['tablename'], values=data['data'], engine=async_engine)
+            await insert_data_async(tablename=data['tablename'], values=data['data'], engine=async_engine)
         finally:
             semaphore.release()
 
@@ -180,8 +163,15 @@ class BaseFNSDataUpdater(ABC):
         logging.basicConfig(level=logging.WARNING, filename='fns_log.log',
                             filemode='w', format='%(asctime)s %(levelname)s %(message)s')
         self._semaphore_count = semaphore_count if semaphore_count > 0 else self.__semaphore_count_base
+
+        if semaphore_count <= 0:
+            logging.warning(f'The parameter "_semaphore_count" is set to base value: {self.__semaphore_count_base}')
+            self._semaphore_count = self.__semaphore_count_base
+        else:
+            self._semaphore_count = semaphore_count
+
         if not (0 < cpu_count <= mp.cpu_count()):
-            logging.warning(f'The parameter "cpu_count" is set to base value: {self.__cpu_count_base}')
+            logging.warning(f'The parameter "_cpu_count" is set to base value: {self.__cpu_count_base}')
             self._cpu_count = self.__cpu_count_base
         else:
             self._cpu_count = cpu_count
@@ -231,33 +221,42 @@ class BaseFNSDataUpdater(ABC):
         """
         print(f'\n\n{self.__class__.__name__} is updating data\n')
 
-        if file_dir is None:
-            logging.error('"file_dir" parameter was given with None value.')
-            return
+        self.engine = get_sync_engine_super_user(pool_size=1, max_overflow=1)
+        self.sessionmaker = get_sessionmaker(sync_engine=self.engine)
 
-        if isinstance(file_dir, str):
-            file_dir = Path(file_dir)
+        try:
+            if file_dir is None:
+                logging.error('"file_dir" parameter was given with None value.')
+                return
 
-        if reset_table: self._reset_table()
+            if isinstance(file_dir, str):
+                file_dir = Path(file_dir)
 
-        if str(file_dir).endswith('.zip'):
-            xml_files_num = _xml_files_num(zip_file_dir=file_dir)
-            self._create_processes(xml_files_num=xml_files_num,
-                                   file_dir=file_dir, )
-        elif str(file_dir).endswith('.xml'):
-            _run_parse_and_insert(parser=self._parser, file_dir=file_dir, semaphore_count=self._semaphore_count)
+            if reset_table:
+                self._reset_table()
 
-        if delete_file_after_update: Path(fr'{file_dir}').unlink(missing_ok=True)
+            if str(file_dir).endswith('.zip'):
+                xml_files_num = _xml_files_num(zip_file_dir=file_dir)
+                self._create_processes(xml_files_num=xml_files_num,
+                                       file_dir=file_dir, )
+            elif str(file_dir).endswith('.xml'):
+                _run_parse_and_insert(parser=self._parser, file_dir=file_dir, semaphore_count=self._semaphore_count)
 
-        if rewrite_table:
-            self._set_indexes()
+            if delete_file_after_update: Path(fr'{file_dir}').unlink(missing_ok=True)
 
-            self._replace_tables()
+            if rewrite_table:
+                self._set_indexes()
 
-            self._drop_temp_table()
+                self._replace_tables()
 
-            self._rename_index()
-        return
+                self._drop_temp_table()
+
+                self._rename_index()
+        except Exception as e:
+            logging.error(msg='Unexpected error occurred', exc_info=True)
+
+        finally:
+            self.engine.dispose()
 
 
     def download(self, ) -> Path | None:
@@ -304,25 +303,30 @@ class BaseFNSDataUpdater(ABC):
         ...
 
     def _reset_table(self, ):
-        drop_tables_from_models(tables_models=[self._parser.tag_parser._database_model])
+        drop_tables_from_models(tables_models=[self._parser.tag_parser._database_model],
+                                session=self.sessionmaker, )
         create_tables_from_models(tables_models=[self._parser.tag_parser._database_model,
-                                                 self._parser.tag_parser._database_model.non_shadow_table])
+                                                 self._parser.tag_parser._database_model.non_shadow_table],
+                                  session=self.sessionmaker, )
         ...
 
     def _set_indexes(self, ):
         for index_item in self._parser.tag_parser._database_model.DB_indexes:
-            create_index(index_name=index_item['index_name'],
+            create_index(engine=self.engine,
+                         index_name=index_item['index_name'],
                          column_index=index_item['column_index'],
                          table=self._parser.tag_parser._database_model,
-                         index_type=index_item['index_type'])
+                         index_type=index_item['index_type'], )
             ...
 
     def _replace_tables(self, ):
-        rename_tables(new_tablename=self._parser.tag_parser._database_model.__tablename__,
-                      old_tablename=self._parser.tag_parser._database_model.non_shadow_table.__tablename__)
+        rename_tables(engine=self.engine,
+                      new_tablename=self._parser.tag_parser._database_model.__tablename__,
+                      old_tablename=self._parser.tag_parser._database_model.non_shadow_table.__tablename__,)
 
     def _drop_temp_table(self, ):
-        drop_temp_table(tablename=self._parser.tag_parser._database_model.non_shadow_table.__tablename__)
+        drop_temp_table(engine=self.engine,
+                        tablename=self._parser.tag_parser._database_model.non_shadow_table.__tablename__)
         ...
 
     def _rename_index(self, ):
@@ -330,7 +334,9 @@ class BaseFNSDataUpdater(ABC):
             old_index_name = index_item['index_name']
             new_index_name = [i['index_name'] for i in self._parser.tag_parser._database_model.non_shadow_table.DB_indexes
                               if i['column_index'] == index_item['column_index']][0]
-            rename_index(old_index_name=old_index_name, new_index_name=new_index_name)
+            rename_index(old_index_name=old_index_name,
+                         new_index_name=new_index_name,
+                         engine=self.engine)
 
 def _xml_files_num(zip_file_dir: Path, ) -> int:
     """
@@ -414,10 +420,18 @@ class UpdaterSNOIP(BaseFNSDataUpdater):
 
 
 if __name__ == "__main__":
-    st = time.perf_counter()
 
+    # for i in range(2):
+    engine = get_sync_engine_super_user()
+    sessionmaker = get_sessionmaker(sync_engine=engine)
+    drop_tables_from_models(sessionmaker)
+    create_tables_from_models(sessionmaker)
+
+    st = time.perf_counter()
+    #
     updater = UpdaterMainInfo(**fns_settings.model_dump())
-    file_dir = updater.download()
+    # file_dir = updater.download()
+    file_dir = r'E:\PycharmProjects\Fns_data\tests\downloaded_dir\data-10092026-structure-12052026.zip'
     if file_dir is not None:
         updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True, reset_table=True)
 
@@ -427,16 +441,19 @@ if __name__ == "__main__":
 
     updater = UpdaterLicenses(**fns_settings.model_dump())
     if file_dir is not None:
-        updater.update_data(file_dir=file_dir, delete_file_after_update=True, rewrite_table=True, reset_table=True)
+        updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True, reset_table=True)
 
     updater = UpdaterSNOUL(**fns_settings.model_dump())
-    file_dir = updater.download()
+#         file_dir = updater.download()
+    file_dir = r'E:\PycharmProjects\Fns_data\tests\downloaded_dir\data-20260925-structure-20230425.zip'
     if file_dir is not None:
-        updater.update_data(file_dir=file_dir, delete_file_after_update=True, rewrite_table=False, reset_table=True)
+        updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=False, reset_table=True)
 
     updater = UpdaterSNOIP(**fns_settings.model_dump())
-    file_dir = updater.download()
+#         file_dir = updater.download()
+    file_dir = r'E:\PycharmProjects\Fns_data\tests\downloaded_dir\data-20260925-structure-20241025.zip'
     if file_dir is not None:
-        updater.update_data(file_dir=file_dir, delete_file_after_update=True, rewrite_table=True, reset_table=False)
+        updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True, reset_table=False)
 
     print('\n---\n', time.perf_counter() - st, ' seconds passed.')
+    ...

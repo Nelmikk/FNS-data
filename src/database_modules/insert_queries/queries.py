@@ -2,7 +2,6 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.engine.base import Engine
 from sqlalchemy import insert
 
-from src.database_modules.database_sessions import async_engine, sync_engine
 from src.database_modules.insert_queries.misc import batch_data
 from src.models.database_models import models_dict
 
@@ -10,7 +9,7 @@ from src.models.database_models import models_dict
 @batch_data(batch_size=14_000)
 async def insert_data_async(tablename: str,
                             values: list[dict],
-                            engine: AsyncEngine = async_engine, ) -> None:
+                            engine: AsyncEngine, ) -> None:
     """
     Асинхронное внесение данных в БД.
     :param tablename:
@@ -26,7 +25,7 @@ async def insert_data_async(tablename: str,
 @batch_data(batch_size=14_000)
 def insert_data(tablename: str,
                 values: list[dict],
-                engine: Engine = sync_engine, ) -> None:
+                engine: Engine, ) -> None:
     """
     Синхронное внесение данных в БД.
     :param tablename:
