@@ -13,7 +13,6 @@ app = FastAPI()
 async_engine = get_async_engine_select_user(**ApiEngineSettings().model_dump())
 
 
-
 @app.get('/v1/organisations/{value}')
 async def get_organisation_info(value: str, ) -> list[fns_main_info | None]:
     """

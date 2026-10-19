@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from copy import deepcopy
 import logging
-from typing import Generator
+from typing import AsyncGenerator
 
 from src.models.other_models import *
 from src.models.database_models import *
@@ -83,9 +83,35 @@ class TagParserMainInfo(TagParserBase):
                          element: etree._Element, ) -> None:
         if element.tag == 'Документ':
             self.org_info['inclusion_date'] = datetime.strptime(element.get('ДатаВклМСП'), '%d.%m.%Y').date()
-            self.org_info['subject_type'] = element.get('ВидСубМСП')
-            self.org_info['subject_category'] = element.get('КатСубМСП')
-            self.org_info['is_social'] = element.get('СведСоцПред')
+            subject_type = str(element.get('ВидСубМСП'))
+            if subject_type == '1':
+                self.org_info['subject_type'] = 'юридическое лицо'
+            elif subject_type == '2':
+                self.org_info['subject_type'] = 'индивидуальный предприниматель'
+            elif subject_type == '3':
+                self.org_info['subject_type'] = 'глава крестьянско-фермерского хозяйства'
+            else:
+                self.org_info['subject_type'] = subject_type
+            del subject_type
+
+            subject_category = str(element.get('КатСубМСП'))
+            if subject_category == '1':
+                self.org_info['subject_category'] = 'микропредприятие'
+            elif subject_category == '2':
+                self.org_info['subject_category'] = 'малое предприятие'
+            elif subject_category == '3':
+                self.org_info['subject_category'] = 'среднее предприятие'
+            else:
+                self.org_info['subject_category'] = subject_category
+            del subject_category
+
+            is_social = str(element.get('СведСоцПред'))
+            if is_social == '1':
+                self.org_info['is_social'] = True
+            elif is_social == '2':
+                self.org_info['is_social'] = False
+            del is_social
+
             for child_element in element:
                 self._parse_recursive(element=child_element)
 

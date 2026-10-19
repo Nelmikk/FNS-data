@@ -5,18 +5,31 @@ import re
 import logging
 
 from src.errors.downloader_errors import CanNotCreateDirectory
-from src.fns_modules.fns_misc import retry
 
 
 class DownloaderBase:
-    download_dir: Path = Path(fr'{Path.cwd()}\downloaded_dir')
+    download_dir: Path = Path(fr'{Path.cwd()}/downloaded_dir')
     _page_url = None
+    attempts = 5
 
-    _file_name = 'downloaded_file.zip'
+    _filename = 'downloaded_file.zip'
     def __init__(self, log_filename: str = 'fns_log.log', ):
         logging.basicConfig(level=logging.INFO, filename=log_filename,
                             filemode='w', format='%(asctime)s %(levelname)s %(message)s')
 
+    @property
+    def _file_url(self, ) -> str:
+        """
+        Собирает необходимую инфу для скачивания.
+        Находит ЮРЛ файла и задает для него имя.
+        :return:
+        """
+        page_content = requests.get(self._page_url, stream=True).content
+        page_content = BeautifulSoup(page_content, 'lxml')
+        file_url = [i for i in page_content.find_all(string=re.compile('opendata')) if '.zip' in i][0]
+        self._filename = file_url.split(sep='/')[-1]
+
+        return file_url
 
 
     def _del_error_file(self, ):
@@ -25,7 +38,7 @@ class DownloaderBase:
         :return:
         """
         try:
-            Path.unlink(Path(fr'{self.download_dir}\{self._file_name}'))
+            Path.unlink(Path(fr'{self.download_dir}/{self._filename}'))
             logging.info(f'Partially downloaded file is deleted. - {self.__class__.__name__}')
         except:
             logging.warning(f'Partially downloaded file is not deleted. - {self.__class__.__name__}')
@@ -46,76 +59,56 @@ class DownloaderBase:
 
 
 
-    def _check_file_name(self, ):
+    def _check_filename(self, ):
         """
         Проверяет, чтобы новый скачанный файл не перезаписывал предыдущий - меняет имя нового файла.
         :return:
         """
         while True:
             i = 1
-            if not (self._file_name in Path.iterdir(self.download_dir)):
+            if not (self._filename in Path.iterdir(self.download_dir)):
                 break
-            logging.warning(f'{self._file_name} is already in download directory. '
-                            f'The file will be named {i}_{self._file_name}. - {self.__class__.__name__}')
-            self._file_name = f'{i}_{self._file_name}'
+            logging.warning(f'{self._filename} is already in download directory. '
+                            f'The file will be named {i}_{self._filename}. - {self.__class__.__name__}')
+            self._filename = f'{i}_{self._filename}'
             i += 1
 
 
-    def _write_response(self,
-                        response: requests.models.Response, ) -> bool:
-        """
-        :param response:
-        :return:
-        """
-        self._check_file_name()
-
-        downloaded = 0
-        try:
-            with open(fr'{self.download_dir}\{self._file_name}', 'wb') as f:
-                for content in response.iter_content(chunk_size=1_000_000):
-                    f.write(content)
-                    downloaded += 1_000_000
-                    print(f'\r{self._file_name} downloading... {downloaded} bytes. '
-                          f'--- {self.__class__.__name__}',
-                          end='',
-                          flush=True)
-                logging.info(f'File downloaded - {self.__class__.__name__}')
-                return True
-        except Exception as e:
-            self._del_error_file()
-            logging.error(f'Error while downloading file {self._file_name}. - {self.__class__.__name__}', exc_info=True)
-            return False
-
-
-
-    @property
-    def _file_url(self, ) -> str:
-        """
-        Собирает необходимую инфу для скачивания.
-        Находит ЮРЛ файла и задает для него имя.
-        :return:
-        """
-        page_content = requests.get(self._page_url, stream=True).content
-        page_content = BeautifulSoup(page_content, 'lxml')
-        file_url = [i for i in page_content.find_all(string=re.compile('https://file.nalog.ru/opendata'))
-                          if '.zip' in i][0]
-        self._file_name = file_url.split(sep='/')[-1]
-
-        return file_url
-
-    @retry(attempts=3)
-    def _download(self, ) -> bool:
+    def _download(self, ):
         file_url = self._file_url
-        response = requests.get(url=file_url, stream=True)
-        if response.status_code == 200:
-            if self._write_response(response=response):
+        downloaded_bytes = 0
 
-                return True
+        for attempt in range(self.attempts):
+            headers = {'Range': f'bytes={downloaded_bytes}-', }
+            try:
+                with requests.get(url=file_url, headers=headers, stream=True, timeout=30) as response:
+                    if response.status_code == 200:
+                        mode = 'wb'
+                        downloaded_bytes = 0
+                    elif response.status_code == 206:
+                        mode = 'ab' if downloaded_bytes > 0 else 'wb'
+                    else:
+                        print(f'Request got status code {response.status_code} - {self.__class__.__name__}')
+                        logging.warning(f'Request got status code {response.status_code} - {self.__class__.__name__}')
+                        return False
 
-            return False
-
-        logging.warning(f'File Status code - {response.status_code} - {self.__class__.__name__}')
+                    with open(f'{self.download_dir}/{self._filename}', mode) as f:
+                        for chunk in response.iter_content(chunk_size=1024 * 1024):
+                            f.write(chunk)
+                            downloaded_bytes += 1024 * 1024
+                            print(f'\r{self._filename} downloading... {downloaded_bytes} bytes. '
+                                  f'--- {self.__class__.__name__}',
+                                  end='',
+                                  flush=True)
+                    return True
+            except:
+                print('\nError while downloading file...')
+        print(f'File was not downloaded - {self.__class__.__name__}')
+        logging.error(f'File was not downloaded - {self.__class__.__name__}')
+        self._del_error_file()
         return False
+
+
 
 
     def download(self, ) -> Path | None:
@@ -124,13 +117,13 @@ class DownloaderBase:
         :return:
         """
         if self._page_url is None:
-            logging.critical(f'Page content was changed, downloader must be updated.  - {self.__class__.__name__}')
+            logging.critical(f'Page content was changed, downloader must be updated. --- {self.__class__.__name__}')
             return None
         if not self._check_download_dir():
             return None
         if not self._download():
             return None
-        return Path(f'{self.download_dir}/{self._file_name}')
+        return Path(f'{self.download_dir}/{self._filename}')
 
 
 
@@ -149,4 +142,7 @@ class DownloaderSNRIP(DownloaderBase):
         self._page_url = 'https://www.nalog.gov.ru/opendata/7707329152-snrip/'
         super().__init__()
 
-__all__ = ['DownloaderRSMP', 'DownloaderSNRIP', 'DownloaderSNRUL', 'DownloaderBase']
+__all__ = ['DownloaderRSMP',
+           'DownloaderSNRIP',
+           'DownloaderSNRUL',
+           'DownloaderBase', ]

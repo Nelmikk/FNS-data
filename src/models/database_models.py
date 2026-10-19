@@ -62,7 +62,7 @@ class fns_main_info_mixin(Base_mixin):
     subject_type: Mapped[str] = mapped_column(nullable=True)
     subject_category: Mapped[str] = mapped_column(nullable=True)
     inclusion_date: Mapped[datetime] = mapped_column(nullable=True)
-    is_social: Mapped[str] = mapped_column(nullable=True)
+    is_social: Mapped[bool] = mapped_column(nullable=True)
     avg_employees_num: Mapped[int] = mapped_column(nullable=True)
     region_code: Mapped[str] = mapped_column(nullable=True)
     region: Mapped[str] = mapped_column(nullable=True)
@@ -195,13 +195,17 @@ class licenses_mixin(Base_mixin):
 
 class licenses(licenses_mixin, Base):
     __tablename__ = 'licenses'
-    DB_indexes = [Base_index(index_name=f'inn_index_licenses', column_index='inn', index_type='btree'), ]
+    DB_indexes = [Base_index(index_name=f'inn_index_licenses', column_index='inn', index_type='btree'),
+                  Base_index(index_name=f'ogrn_index_licenses', column_index='ogrn', index_type='btree'),
+                  ]
 
 
 class licenses_shadow(licenses_mixin, Base, Base_shadow_table):
     __tablename__ = 'licenses_shadow'
     non_shadow_table = licenses
-    DB_indexes = [Base_index(index_name=f'inn_index_licenses_shadow', column_index='inn', index_type='btree'), ]
+    DB_indexes = [Base_index(index_name=f'inn_index_licenses_shadow', column_index='inn', index_type='btree'),
+                  Base_index(index_name=f'ogrn_index_licenses_shadow', column_index='ogrn', index_type='btree'),
+                  ]
 
 
 

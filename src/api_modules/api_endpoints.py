@@ -104,5 +104,8 @@ async def get_full_data(value: str,
     return [api_models.full_data.model_validate(result) async for result in results if result is not None]
 
 
-__all__ = ['get_full_data', 'get_licenses_endpoint', 'get_sno_endpoint',
-           'get_organisation_info_endpoint', 'get_additional_okveds_endpoint']
+__all__ = ['get_full_data',
+           'get_licenses_endpoint',
+           'get_sno_endpoint',
+           'get_organisation_info_endpoint',
+           'get_additional_okveds_endpoint']

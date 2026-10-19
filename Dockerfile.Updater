@@ -1,7 +1,7 @@
 FROM fns_data_base_image:latest
 
 RUN mkdir -p /app/src/
-WORKDIR /app/src/
+WORKDIR /app/
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

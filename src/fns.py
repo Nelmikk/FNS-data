@@ -6,6 +6,7 @@ from pathlib import Path
 from zipfile import ZipFile
 import time
 import logging
+import gc
 
 from src.database_modules.database_sessions import (get_async_engine_super_user,
                                                     get_sync_engine_super_user,
@@ -17,12 +18,11 @@ from src.database_modules.database_conf import settings_super_user
 
 from src.models.other_models import Parser_output
 
+from src.fns_modules.fns_misc import check_latest_files, update_latest_files
 from src.fns_modules.fns_config import fns_settings
 from src.fns_modules.fns_downloaders import DownloaderBase, DownloaderSNRIP
 from src.fns_modules.fns_parsers import ParserBase, ParserSNOUL, ParserSNOIP, ParserMainInfo, ParserAdditionalOkveds, ParserLicenses
 from src.fns_modules.fns_downloaders import DownloaderRSMP, DownloaderSNRUL
-
-mp.set_start_method('spawn', force=True)
 
 
 def _run_parse_and_insert(*args,
@@ -93,6 +93,7 @@ async def _parse_and_insert(parser: type[ParserBase],
                                             semaphore=semaphore))
                 l += 1
                 print(f'\r{time.perf_counter()-ts} || {l}/{r}', end='', flush=True)
+                gc.collect()    # GarbageCollector и Docker - братья на век.
         # Закрытие пула соединений.
     finally:
         await async_engine.dispose()
@@ -160,8 +161,10 @@ class BaseFNSDataUpdater(ABC):
                                                 Количество создаваемых процессов.
                                                  Не позволит создать больше, чем есть на машине.
         """
-        logging.basicConfig(level=logging.WARNING, filename='fns_log.log',
-                            filemode='w', format='%(asctime)s %(levelname)s %(message)s')
+        logging.basicConfig(level=logging.WARNING,
+                            filename='logs/fns_log.log',
+                            filemode='w',
+                            format='%(asctime)s %(levelname)s %(message)s')
         self._semaphore_count = semaphore_count if semaphore_count > 0 else self.__semaphore_count_base
 
         if semaphore_count <= 0:
@@ -202,16 +205,17 @@ class BaseFNSDataUpdater(ABC):
                     rewrite_table: bool = False, ) -> None:
         """
         Запуск апдейта данных.
+            Здесь происходит парсинг данных и все взаимодействие с БД.
 
         :param reset_table:                     bool.
-                                                    Если True, то shadow таблица создается заново перед парсингом.
+                                                    Если True, то shadow таблица пересоздается перед парсингом.
 
         :param rewrite_table:                   bool.
                                                     Если True, то таблица, в которую записываются данные, перезапишет
                                                     основную таблицу для хранения данных.
 
         :param delete_file_after_update:        bool.
-                                                    Если True, то файл, передаваемый в file_dir удаляется после аптейта.
+                                                    Если True, то файл, передаваемый в file_dir удаляется после апдейта.
 
         :param file_dir:                        pathlib.Path | str.
                                                     Полный путь к zip-архиву.
@@ -227,35 +231,53 @@ class BaseFNSDataUpdater(ABC):
         try:
             if file_dir is None:
                 logging.error('"file_dir" parameter was given with None value.')
+                print('"file_dir" parameter was given with None value.')
                 return
 
             if isinstance(file_dir, str):
                 file_dir = Path(file_dir)
 
+            # Проверка на актуальность скачанного файла, если файл уже парсился, то скип.
+            if check_latest_files(updater_classname=self.__class__.__name__, filename=file_dir.name):
+                logging.info(msg=f'File "{file_dir.name}" has already been parsed before.')
+                print(f'File "{file_dir.name}" has already been parsed before.')
+                return 
+
+            # Пересоздание shadow-таблицы.
             if reset_table:
                 self._reset_table()
 
+            # Парсинг .zip-архивов.
             if str(file_dir).endswith('.zip'):
                 xml_files_num = _xml_files_num(zip_file_dir=file_dir)
                 self._create_processes(xml_files_num=xml_files_num,
                                        file_dir=file_dir, )
+            # Парсинг .xml-файлов.
             elif str(file_dir).endswith('.xml'):
                 _run_parse_and_insert(parser=self._parser, file_dir=file_dir, semaphore_count=self._semaphore_count)
 
-            if delete_file_after_update: Path(fr'{file_dir}').unlink(missing_ok=True)
-
+            # Замена основных таблиц на shadow-таблицы.
             if rewrite_table:
+                # Создание индексов.
                 self._set_indexes()
-
+                # Замена основной таблицы на shadow-таблицу.
                 self._replace_tables()
-
+                # Удаление временной таблицы.
                 self._drop_temp_table()
-
+                # Изменение названий индексов.
                 self._rename_index()
+
+            update_latest_files(updater_classname=self.__class__.__name__, filename=file_dir.name)
         except Exception as e:
+            # Удаление файла, при парсинге которого произошла ошибка
+            Path(fr'{file_dir}').unlink(missing_ok=True)
+
             logging.error(msg='Unexpected error occurred', exc_info=True)
 
         finally:
+            # Удаление файла.
+            if delete_file_after_update:
+                Path(fr'{file_dir}').unlink(missing_ok=True)
             self.engine.dispose()
 
 
@@ -293,7 +315,7 @@ class BaseFNSDataUpdater(ABC):
                         'left': left,
                         'right': right,
                         'semaphore_count': self._semaphore_count,
-                        'log_filename': f'fns_log_process{i}.log', }))
+                        'log_filename': f'logs/fns_log_process{i}.log', }))
 
         for process in processes:
             process.start()
@@ -303,6 +325,11 @@ class BaseFNSDataUpdater(ABC):
         ...
 
     def _reset_table(self, ):
+        """
+        Пересоздает shadow-таблицу.
+
+            Удаляет shadow таблицу, если существует, и создает заново в двух транзакциях.
+        """
         drop_tables_from_models(tables_models=[self._parser.tag_parser._database_model],
                                 session=self.sessionmaker, )
         create_tables_from_models(tables_models=[self._parser.tag_parser._database_model,
@@ -311,6 +338,9 @@ class BaseFNSDataUpdater(ABC):
         ...
 
     def _set_indexes(self, ):
+        """
+        Создание индексов.
+        """
         for index_item in self._parser.tag_parser._database_model.DB_indexes:
             create_index(engine=self.engine,
                          index_name=index_item['index_name'],
@@ -320,16 +350,25 @@ class BaseFNSDataUpdater(ABC):
             ...
 
     def _replace_tables(self, ):
+        """
+        Замена основных таблиц на shadow-таблицы.
+        """
         rename_tables(engine=self.engine,
                       new_tablename=self._parser.tag_parser._database_model.__tablename__,
                       old_tablename=self._parser.tag_parser._database_model.non_shadow_table.__tablename__,)
 
     def _drop_temp_table(self, ):
+        """
+        Дроп остоточных временных таблиц после изменения названий.
+        """
         drop_temp_table(engine=self.engine,
                         tablename=self._parser.tag_parser._database_model.non_shadow_table.__tablename__)
         ...
 
     def _rename_index(self, ):
+        """
+        Изменение названий индексов, в соответствии с именем таблицы
+        """
         for index_item in self._parser.tag_parser._database_model.DB_indexes:
             old_index_name = index_item['index_name']
             new_index_name = [i['index_name'] for i in self._parser.tag_parser._database_model.non_shadow_table.DB_indexes
@@ -420,18 +459,10 @@ class UpdaterSNOIP(BaseFNSDataUpdater):
 
 
 if __name__ == "__main__":
+    mp.set_start_method('spawn', force=True)
 
-    # for i in range(2):
-    engine = get_sync_engine_super_user()
-    sessionmaker = get_sessionmaker(sync_engine=engine)
-    drop_tables_from_models(sessionmaker)
-    create_tables_from_models(sessionmaker)
-
-    st = time.perf_counter()
-    #
     updater = UpdaterMainInfo(**fns_settings.model_dump())
-    # file_dir = updater.download()
-    file_dir = r'E:\PycharmProjects\Fns_data\tests\downloaded_dir\data-10092026-structure-12052026.zip'
+    file_dir = updater.download()
     if file_dir is not None:
         updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True, reset_table=True)
 
@@ -444,16 +475,11 @@ if __name__ == "__main__":
         updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True, reset_table=True)
 
     updater = UpdaterSNOUL(**fns_settings.model_dump())
-#         file_dir = updater.download()
-    file_dir = r'E:\PycharmProjects\Fns_data\tests\downloaded_dir\data-20260925-structure-20230425.zip'
+    file_dir = updater.download()
     if file_dir is not None:
         updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=False, reset_table=True)
 
     updater = UpdaterSNOIP(**fns_settings.model_dump())
-#         file_dir = updater.download()
-    file_dir = r'E:\PycharmProjects\Fns_data\tests\downloaded_dir\data-20260925-structure-20241025.zip'
+    file_dir = updater.download()
     if file_dir is not None:
         updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True, reset_table=False)
-
-    print('\n---\n', time.perf_counter() - st, ' seconds passed.')
-    ...

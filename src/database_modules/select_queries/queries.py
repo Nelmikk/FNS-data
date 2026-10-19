@@ -151,11 +151,16 @@ def __select_full_data_ul_query(search_type: str,
         raise ValueError(f'search_type parameter expected "ogrn" or "inn" but got "{search_type}".')
 
     # CTE здесь ускоряют запрос в БД и гарантируют, что все данные получены в один момент времени.
-    statement = text(f'WITH {sno.__tablename__}_cte AS ('
+    statement = text(f'WITH {fns_main_info.__tablename__}_cte AS ('
+                     f'SELECT * '
+                     f'FROM {fns_main_info.__tablename__} '
+                     f'WHERE {search_type} = :{search_type}'
+                     f'), '
+                     
+                     f'{sno.__tablename__}_cte AS ('
                      f'SELECT * '
                      f'FROM {sno.__tablename__} '
-                     f'WHERE inn = (SELECT inn FROM {fns_main_info.__tablename__} '
-                     f'WHERE {fns_main_info.__tablename__}.ogrn = :{search_type})'
+                     f'WHERE inn = (SELECT inn FROM {fns_main_info.__tablename__}_cte)'
                      f'), '
 
                      f'{okveds.__tablename__}_cte AS ('
@@ -170,16 +175,15 @@ def __select_full_data_ul_query(search_type: str,
                      f'WHERE {search_type} = :{search_type}'
                      f') '
 
-                     f'SELECT {fns_main_info.__tablename__}.*'
+                     f'SELECT {fns_main_info.__tablename__}_cte.*'
                      f', {licenses.__tablename__}_cte.licenses_data'
                      f', {okveds.__tablename__}_cte.additional_okveds_data'
                      f', {sno.__tablename__}_cte.eshn, {sno.__tablename__}_cte.usn, {sno.__tablename__}_cte.ausn'
                      f', {sno.__tablename__}_cte.srp, {sno.__tablename__}_cte.psn, {sno.__tablename__}_cte.npd '
-                     f'FROM {fns_main_info.__tablename__} '
-                     f'LEFT JOIN {sno.__tablename__}_cte ON {sno.__tablename__}_cte.inn = {fns_main_info.__tablename__}.inn '
-                     f'LEFT JOIN {okveds.__tablename__}_cte ON {okveds.__tablename__}_cte.ogrn = {fns_main_info.__tablename__}.ogrn '
-                     f'LEFT JOIN {licenses.__tablename__}_cte ON {licenses.__tablename__}_cte.ogrn = {fns_main_info.__tablename__}.ogrn '
-                     f'WHERE {fns_main_info.__tablename__}.{search_type} = :{search_type};')
+                     f'FROM {fns_main_info.__tablename__}_cte '
+                     f'LEFT JOIN {sno.__tablename__}_cte ON {sno.__tablename__}_cte.inn = {fns_main_info.__tablename__}_cte.inn '
+                     f'LEFT JOIN {okveds.__tablename__}_cte ON {okveds.__tablename__}_cte.ogrn = {fns_main_info.__tablename__}_cte.ogrn '
+                     f'LEFT JOIN {licenses.__tablename__}_cte ON {licenses.__tablename__}_cte.ogrn = {fns_main_info.__tablename__}_cte.ogrn;')
     parameters = {search_type: value}
     return SELECT_QUERY(statement=statement, parameters=parameters)
 

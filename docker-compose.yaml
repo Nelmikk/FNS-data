@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:18
+    container_name: '${DB_host}'
+    healthcheck:
+      test: ['CMD','pg_isready','-U','${DB_super_user_name}']
+      interval: 5s
+      timeout: 5s
+      retries: 3
+    environment:
+      POSTGRES_DB: '${DB_name}'
+      POSTGRES_USER: '${DB_super_user_name}'
+      POSTGRES_PASSWORD: '${DB_super_user_password}'
+    env_file:
+      - .env
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    restart: always
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: fns-api
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '${API_host_port}:${API_port}'
+    restart: always
+
+  updater:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: fns-updater
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - /src/logs:/app/logs
+      - /src/latest_files:/app/latest_files
+    restart: no
+
+volumes:
+  pgdata:

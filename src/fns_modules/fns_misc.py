@@ -1,10 +1,9 @@
-from functools import wraps
 from pathlib import Path
-from typing import AsyncGenerator, Generator
+from typing import Generator
 from zipfile import ZipFile
 from lxml import etree
 import logging
-from inspect import iscoroutinefunction
+import json
 
 
 class Unzipper:
@@ -64,40 +63,36 @@ class FileReader:
             return None
 
 
-
-def retry(attempts: int = 1, ):
+def check_latest_files(updater_classname: str,
+                       filename: str, ) -> bool:
     """
-    Декоратор для повторных попыток функций/методов, которые возвращают False при неудаче.
-    attempts: int - количество попыток
+    Проверяет последний скачанный файл по названию класса апдейтера.
+        Возвращает True, если данные из файла уже в БД, иначе - False.
     """
-    attempts = attempts if attempts > 0 else 1
-    def f(func, ):
-        @wraps(func)
-        def sync_wrapper(*args, **kwargs, ):
+    if not Path.cwd().joinpath(Path('latest_files/latest_files.json')).exists():
+        Path.cwd().joinpath(Path('latest_files')).mkdir(exist_ok=True)
+        return False
 
-            for attempt_num in range(attempts):
+    with open(Path.cwd().joinpath(Path('latest_files/latest_files.json')), 'r') as f:
+        latest_files = dict(json.loads(f.read()))
+        if updater_classname not in latest_files.keys():
+            return False
 
-                if attempt_num > attempts:
-                    return False
+        if latest_files[updater_classname] != filename:
+            return False
+    return True
 
-                print(f'\n{attempt_num} attempt ...')
-                logging.info(f'{attempt_num} attempt ...')
-                if func(*args, **kwargs) is True:
-                    return True
 
-        @wraps(func)
-        def async_wrapper(*args, **kwargs, ):
-            for attempt_num in range(attempts):
+def update_latest_files(updater_classname: str,
+                        filename: str, ):
+    """
+    Обновляет json-файл с последними файлами, данные с которых добавились в БД.
+    """
+    latest_files = dict()
+    if Path.cwd().joinpath(Path('latest_files/latest_files.json')).exists():
+        with open(Path.cwd().joinpath(Path('latest_files/latest_files.json')), 'r') as f:
+            latest_files = dict(json.loads(f.read()))
+    latest_files[updater_classname] = filename
 
-                if attempt_num > attempts:
-                    return False
-
-                print(f'\n{attempt_num} attempt ...')
-                logging.info(f'{attempt_num} attempt ...')
-                if func(*args, **kwargs) is True:
-                    return True
-
-        if iscoroutinefunction(func):
-            return async_wrapper
-        return sync_wrapper
-    return f
+    with open(Path.cwd().joinpath(Path('latest_files/latest_files.json')), 'w') as f:
+        f.write(json.dumps(latest_files, ensure_ascii=False))
