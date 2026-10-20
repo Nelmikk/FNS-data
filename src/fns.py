@@ -459,6 +459,7 @@ class UpdaterSNOIP(BaseFNSDataUpdater):
 
 
 if __name__ == "__main__":
+    # Указание метода запуска процессов.
     mp.set_start_method('spawn', force=True)
 
     updater = UpdaterMainInfo(**fns_settings.model_dump())
@@ -472,14 +473,14 @@ if __name__ == "__main__":
 
     updater = UpdaterLicenses(**fns_settings.model_dump())
     if file_dir is not None:
-        updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True, reset_table=True)
+        updater.update_data(file_dir=file_dir, delete_file_after_update=True, rewrite_table=True, reset_table=True)
 
     updater = UpdaterSNOUL(**fns_settings.model_dump())
     file_dir = updater.download()
     if file_dir is not None:
-        updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=False, reset_table=True)
+        updater.update_data(file_dir=file_dir, delete_file_after_update=True, rewrite_table=False, reset_table=True)
 
     updater = UpdaterSNOIP(**fns_settings.model_dump())
     file_dir = updater.download()
     if file_dir is not None:
-        updater.update_data(file_dir=file_dir, delete_file_after_update=False, rewrite_table=True, reset_table=False)
+        updater.update_data(file_dir=file_dir, delete_file_after_update=True, rewrite_table=True, reset_table=False)

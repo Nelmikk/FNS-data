@@ -18,8 +18,6 @@ async def get_organisation_info(value: str, ) -> list[fns_main_info | None]:
     """
     Получение основной инфы по организации.
         Если организация не найдена, то вернется пустой список
-    :param value:
-    :return:
     """
     return await get_organisation_info_endpoint(value=value, async_engine=async_engine)
 
@@ -28,8 +26,6 @@ async def get_additional_okveds(value: str, ) -> list[okveds | None]:
     """
     Получение дополнительных ОКВЭДов по ИНН/ОГРН организации.
         Если организация не найдена, то вернется пустой список.
-    :param value:
-    :return:
     """
     return await get_additional_okveds_endpoint(value=value,
                                                 async_engine=async_engine)
@@ -40,8 +36,6 @@ async def get_licenses(value: str, ) -> list[licenses | None]:
     """
     Получение сведений о лицензиях по ИНН/ОГРН организации.
         Если организация не найдена, то вернется пустой список
-    :param value:
-    :return:
     """
     return await get_licenses_endpoint(value=value,
                                        async_engine=async_engine)
@@ -52,8 +46,6 @@ async def get_sno(value: str, ) -> list[sno | None]:
     """
     Получение сведений об СНО по ИНН/ОГРН организации.
         Если организация не найдена, то вернется пустой список.
-    :param value:
-    :return:
     """
     return await get_sno_endpoint(value=value,
                                   async_engine=async_engine)
@@ -64,8 +56,6 @@ async def get_full_organisation_data(value: str, ) -> list[full_data | None] | s
     """
     Получение всей доступной инфы по ИНН/ОГРН организации.
         Если организация не найдена, то вернется пустой список
-    :param value:
-    :return:
     """
     return await get_full_data(value=value,
                                async_engine=async_engine)

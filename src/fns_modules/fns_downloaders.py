@@ -74,7 +74,12 @@ class DownloaderBase:
             i += 1
 
 
-    def _download(self, ):
+    def _download(self, ) -> bool:
+        """
+        Скачивание zip-архива.
+            Если скачивание прерывается, то пробует скачать с того же места,
+            если не получается, то пробует скачать по новой.
+        """
         file_url = self._file_url
         downloaded_bytes = 0
 

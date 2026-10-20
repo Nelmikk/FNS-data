@@ -45,7 +45,7 @@ services:
     volumes:
       - /src/logs:/app/logs
       - /src/latest_files:/app/latest_files
-    restart: no
+    restart: always
 
 volumes:
   pgdata:

@@ -46,23 +46,6 @@ class Unzipper:
                 yield None
 
 
-
-class FileReader:
-    def get_file_root(self,
-                      file_dir: str | Path, ) -> etree._Element | None:
-        """
-        Возвращает объект типа _Element для парсинга.
-        :param file_dir:
-        :return:
-        """
-        try:
-            root = etree.parse(file_dir).getroot()
-            return root
-        except:
-            logging.error(f'Error parsing xml-file. Xml-file could be corrupted. {file_dir}')
-            return None
-
-
 def check_latest_files(updater_classname: str,
                        filename: str, ) -> bool:
     """
